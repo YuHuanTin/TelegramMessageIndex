@@ -1,2 +1,7 @@
 # 项目排除路径
 /cmake-build-debug/
+
+/TDLib-Debug
+/TDLib-Release
+/TDLib-RelWithDebInfo
+/cpp
