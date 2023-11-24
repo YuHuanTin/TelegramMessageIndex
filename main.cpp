@@ -19,12 +19,6 @@
 #include <algorithm>
 
 
-void writeFile(const std::string &FilePath, const std::string &FileContent) {
-    std::fstream fs(FilePath, std::ios_base::out | std::ios_base::binary | std::ios_base::app);
-    fs.write(FileContent.c_str(), FileContent.size());
-    fs.close();
-}
-
 // overloaded
 namespace detail {
     template<class... Fs>
