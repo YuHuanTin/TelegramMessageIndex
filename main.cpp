@@ -1,6 +1,7 @@
 
 #include <td/telegram/Client.h>
 #include <td/telegram/td_api.h>
+#include <memory>
 #include <td/telegram/td_api.hpp>
 
 #include <cstdint>
@@ -70,6 +71,9 @@ public:
 
 
         send_query(td_api::make_object<td_api::getOption>("version"), {});
+
+        ptr_fs = std::make_unique<std::fstream>("./log.txt",
+                                                std::ios_base::out | std::ios_base::binary | std::ios_base::app);
     }
 
     void loop() {
@@ -209,23 +213,27 @@ private:
                 }
 
 
-                // get sender name
+                // get sender id and name
                 std::string sender_name;
+                td_api::int53 sender_id = 0;
                 switch (message->sender_id_->get_id()) {
                     case td_api::messageSenderUser::ID: {
                         auto user = td_api::move_object_as<td_api::messageSenderUser>(message->sender_id_);
                         sender_name = get_user_name(user->user_id_);
+                        sender_id = user->user_id_;
                         break;
                     }
                     case td_api::messageSenderChat::ID: {
                         auto chat = td_api::move_object_as<td_api::messageSenderChat>(message->sender_id_);
                         sender_name = get_chat_title(chat->chat_id_);
+                        sender_id = chat->chat_id_;
                         break;
                     }
                 }
 
 
                 // get message text
+                std::string message_text;
                 switch (message->content_->get_id()) {
                     case td_api::messageText::ID: {
                         auto message_content = td_api::move_object_as<td_api::messageText>(message->content_);
@@ -236,22 +244,29 @@ private:
                             message_content->text_->text_.erase(current_pos, 1);
                         }
 
-                        ss << std::format("message id: {} timestamp: {} from: {} \t: {}\r\n",
-                                          message->id_,
-                                          message->date_,
-                                          sender_name,
-                                          message_content->text_->text_);
+                        message_text = message_content->text_->text_;
                     }
                 }
 
 
-                // collect message id and timestamp
+                // collect message
+                ss << std::format("message id: {} timestamp: {} from: [{:<16}] {} \t: {}\r\n",
+                                  message->id_,
+                                  message->date_,
+                                  sender_id,
+                                  sender_name,
+                                  message_text);
                 mapRecvMessages[message->id_] = message->date_;
             }
 
 
             // write message to file
-            writeFile("./log.txt", ss.str());
+            if (ptr_fs->is_open()) {
+                ptr_fs->write(ss.str().c_str(), ss.str().length());
+                ptr_fs->flush();
+            } else {
+                ptr_fs->open("./log.txt", std::ios_base::app | std::ios_base::binary | std::ios_base::out);
+            }
 
 
             // remove old message from map
@@ -287,6 +302,12 @@ private:
     }
 
 private:
+    /// custom
+
+    std::unique_ptr<std::fstream> ptr_fs;
+
+    /// custom
+
     using Object = td_api::object_ptr<td_api::Object>;
     std::unique_ptr<td::ClientManager> client_manager_;
     std::int32_t client_id_{0};
