@@ -15,16 +15,14 @@
 #include <cassert>
 #include <fstream>
 #include <thread>
+#include <algorithm>
 
-void writeFile(const std::string &FilePath, const std::vector<uint8_t> &FileContent) {
+
+void writeFile(const std::string &FilePath, const std::string &FileContent) {
     std::fstream fs(FilePath, std::ios_base::out | std::ios_base::binary | std::ios_base::app);
-    fs.write(reinterpret_cast<const char *>(FileContent.data()), FileContent.size());
+    fs.write(FileContent.c_str(), FileContent.size());
     fs.close();
 }
-
-// Simple single-threaded example of TDLib usage.
-// Real world programs should use separate thread for the user input.
-// Example includes user authentication, receiving updates, getting chat list and sending text messages.
 
 // overloaded
 namespace detail {
@@ -148,10 +146,11 @@ public:
                     std::cin >> chat_id;
                     td_api::int64 lastMessageID = 0;
 
+                    std::map<td_api::int53, td_api::int32> mapRecvMessages;
 
                     while (true) {
-                        get_history_message(chat_id, lastMessageID);
-                        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+                        get_history_message(chat_id, lastMessageID, mapRecvMessages);
+                        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
                     }
                 }
             }
@@ -159,7 +158,11 @@ public:
     }
 
 private:
-    void get_history_message(td_api::int53 Chat_id, td_api::int64 &LastMessageID) {
+    void get_history_message(
+            td_api::int53 Chat_id,
+            td_api::int64 &LastMessageID,
+            std::map<td_api::int53, td_api::int32> &mapRecvMessages
+    ) {
         auto obj_get_chat_history = td_api::make_object<td_api::getChatHistory>(
                 Chat_id,
                 LastMessageID,
@@ -169,31 +172,44 @@ private:
         );
 
         bool wait = true;
-        send_query(std::move(obj_get_chat_history), [this, &LastMessageID, &wait](Object object) {
+        send_query(std::move(obj_get_chat_history), [this, &LastMessageID, &wait, &mapRecvMessages](Object object) {
+            // if recv error return
             if (object->get_id() == td_api::error::ID) {
                 std::println("Error: {}", to_string(object));
                 wait = false;
                 return;
             }
+
+
+            // if recv empty return
             auto messages = td::move_tl_object_as<td_api::messages>(object);
             if (messages->total_count_ == 0) {
                 wait = false;
                 return;
             }
 
-            if (LastMessageID == messages->messages_.back()->id_) {
-                std::println("may is same request response");
-                wait = false;
-                return;
-            }
 
+            // print message count
             std::println("Got {} messages", messages->total_count_);
 
+
+            // set last message id
             LastMessageID = messages->messages_.back()->id_;
+
+
+            // collect message and save to ss
+            // and save id_ and data_ to map
+            std::stringstream ss;
             for (auto iterator = messages->messages_.begin(); iterator != messages->messages_.end(); ++iterator) {
                 auto message = td::move_tl_object_as<td_api::message>(*iterator);
 
-                // 处理发送人
+                // void collect repeat message
+                if (mapRecvMessages.find(message->id_) != mapRecvMessages.end()) {
+                    continue;
+                }
+
+
+                // get sender name
                 std::string sender_name;
                 switch (message->sender_id_->get_id()) {
                     case td_api::messageSenderUser::ID: {
@@ -208,28 +224,55 @@ private:
                     }
                 }
 
+
+                // get message text
                 switch (message->content_->get_id()) {
                     case td_api::messageText::ID: {
-                        auto text = td_api::move_object_as<td_api::messageText>(message->content_);
+                        auto message_content = td_api::move_object_as<td_api::messageText>(message->content_);
 
-
-                        // find and remove text's "\r\n"
-                        int current_pos = 0;
-                        while ((current_pos = text->text_->text_.find('\n', current_pos)) != std::string::npos) {
-                            text->text_->text_.erase(current_pos, 1);
+                        // find and remove message_content's "\r\n"
+                        size_t current_pos = 0;
+                        while ((current_pos = message_content->text_->text_.find('\n', current_pos)) != std::string::npos) {
+                            message_content->text_->text_.erase(current_pos, 1);
                         }
 
-                        std::string s = std::format("message id: {} timestamp: {} from: {} \t: {}\r\n",
-                                                    message->id_,
-                                                    message->date_,
-                                                    sender_name,
-                                                    text->text_->text_);
-
-                        std::vector<uint8_t> bytes(s.begin(), s.end());
-                        writeFile("./log.txt", bytes);
+                        ss << std::format("message id: {} timestamp: {} from: {} \t: {}\r\n",
+                                          message->id_,
+                                          message->date_,
+                                          sender_name,
+                                          message_content->text_->text_);
                     }
                 }
+
+
+                // collect message id and timestamp
+                mapRecvMessages[message->id_] = message->date_;
             }
+
+
+            // write message to file
+            writeFile("./log.txt", ss.str());
+
+
+            // remove old message from map
+            if (mapRecvMessages.size() > 5000) {
+                std::vector<std::pair<td_api::int53, td_api::int32>> pairs;
+                for (auto it = mapRecvMessages.begin(); it != mapRecvMessages.end(); ++it)
+                    pairs.emplace_back(*it);
+
+                std::sort(pairs.begin(), pairs.end(), [](auto a, auto b) {
+                    return a.second < b.second;
+                });
+
+                pairs.erase(pairs.begin(), pairs.begin() + 2000);
+
+                mapRecvMessages.clear();
+                for (auto it = pairs.begin(); it != pairs.end(); ++it)
+                    mapRecvMessages[it->first] = it->second;
+            }
+
+
+            // cancel wait
             wait = false;
         });
 
