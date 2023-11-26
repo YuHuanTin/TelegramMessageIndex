@@ -58,4 +58,8 @@ link_libraries(OpenSSL::Crypto OpenSSL::SSL)
 link_libraries(ws2_32 CRYPT32 Normaliz Psapi)
 
 
-add_executable(TelegramMessageIndex main.cpp)
+add_executable(TelegramMessageIndex main.cpp
+        Functions.cpp
+        Functions.h
+        TelegramClientCore.cpp
+        TelegramClientCore.h)
