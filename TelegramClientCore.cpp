@@ -7,6 +7,7 @@
 #include <print>
 #include <iostream>
 #include <sstream>
+#include <filesystem>
 
 
 namespace td_api = td::td_api;
@@ -87,7 +88,7 @@ void TelegramClientCore::loop() {
                 auto send_message = td_api::make_object<td_api::sendMessage>();
                 send_message->chat_id_ = chat_id;
                 auto message_content = td_api::make_object<td_api::inputMessageText>();
-                message_content->text_ = td_api::make_object<td_api::formattedText>();
+                message_content->text_        = td_api::make_object<td_api::formattedText>();
                 message_content->text_->text_ = std::move(text);
                 send_message->input_message_content_ = std::move(message_content);
 
@@ -174,13 +175,13 @@ void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Objec
         }
         case td_api::updateUser::ID: {
             auto update_user = td_api::move_object_as<td_api::updateUser>(update);
-            auto user_id = update_user->user_->id_;
+            auto user_id    = update_user->user_->id_;
             users_[user_id] = std::move(update_user->user_);
             break;
         }
         case td_api::updateNewMessage::ID: {
             auto update_new_message = td_api::move_object_as<td_api::updateNewMessage>(update);
-            auto chat_id = update_new_message->message_->chat_id_;
+            auto chat_id            = update_new_message->message_->chat_id_;
             std::string sender_name;
 
             switch (update_new_message->message_->sender_id_->get_id()) {
@@ -201,12 +202,39 @@ void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Objec
                     break;
             }
 
-            std::string text;
-            if (update_new_message->message_->content_->get_id() == td_api::messageText::ID) {
-                text = static_cast<td_api::messageText &>(*update_new_message->message_->content_).text_->text_;
+
+            // 处理消息类型
+            switch (update_new_message->message_->content_->get_id()) {
+                case td_api::messageUnsupported::ID: {
+                    std::println("Receive unsupported message: [chat_id:{}][from:{}]", chat_id, sender_name);
+                    break;
+                }
+                case td_api::messageText::ID: {
+                    std::string text = td_api::move_object_as<td_api::messageText>(update_new_message->message_->content_)->text_->text_;
+                    std::println("Receive message: [chat_id:{}][from:{}][{}]", chat_id, sender_name, text);
+                    break;
+                }
+                case td_api::messagePhoto::ID: {
+                    auto photo_ = td_api::move_object_as<td_api::messagePhoto>(update_new_message->message_->content_);
+
+                    // always download bigest photo
+                    send_query(td_api::make_object<td_api::downloadFile>(photo_->photo_->sizes_.back()->photo_->id_, 32, 0, 0, true),
+                               [sender_name](Object object) {
+                                   auto file = td_api::move_object_as<td_api::file>(object);
+
+                                   // rename with send person name
+                                   std::filesystem::path file_path(file->local_->path_);
+                                   std::filesystem::rename(file_path, file_path.parent_path() / (sender_name + ".jpg"));
+                               });
+                    std::println("Receive photo message: [chat_id:{}][from:{}]", chat_id, sender_name);
+                    break;
+                }
+                default: {
+                    // 处理未知的消息类型
+                    std::println("Receive unknown message type: [chat_id:{}][from:{}]", chat_id, sender_name);
+                }
             }
 
-            std::println("Receive message: [chat_id:{}][from:{}][{}]", chat_id, sender_name, text);
 
             break;
         }
@@ -305,14 +333,14 @@ void TelegramClientCore::on_authorization_state_update() {
         }
         case td_api::authorizationStateWaitTdlibParameters::ID: {
             auto request = td_api::make_object<td_api::setTdlibParameters>();
-            request->database_directory_ = "tdlib";
+            request->database_directory_   = "tdlib";
             request->use_message_database_ = true;
-            request->use_secret_chats_ = true;
-            request->api_id_ = 14370505;
-            request->api_hash_ = "7cbc707a62ce714074b6853d72b92da5";
+            request->use_secret_chats_     = true;
+            request->api_id_               = 14370505;
+            request->api_hash_             = "7cbc707a62ce714074b6853d72b92da5";
             request->system_language_code_ = "en";
-            request->device_model_ = "Desktop";
-            request->application_version_ = "1.0";
+            request->device_model_         = "Desktop";
+            request->application_version_  = "1.0";
             request->enable_storage_optimizer_ = true;
             send_query(std::move(request), create_authentication_query_handler());
             break;
