@@ -190,8 +190,30 @@ void Functions::parse_update_message(TelegramClientCore *Core, td::tl::unique_pt
                                  std::filesystem::path file_path(file->local_->path_);
                                  std::string           sender_name_gbk = Utils::CodeConvert::utf8_to_gbk(sender_name);
 
-                                 std::filesystem::rename(file_path, file_path.parent_path() /
-                                                                    std::format("{}_{}{}", sender_name_gbk, file->id_, file_path.extension().string()));
+                                 std::for_each(sender_name_gbk.begin(), sender_name_gbk.end(), [](char &c) {
+                                     switch (c) {
+                                         case '\\':
+                                         case '/':
+                                         case ':':
+                                         case '*':
+                                         case '?':
+                                         case '"':
+                                         case '<':
+                                         case '>':
+                                         case '|':
+                                             c = '_';
+                                             break;
+                                         default:
+                                             break;
+                                     }
+                                 });
+                                 try {
+                                     std::filesystem::rename(file_path, file_path.parent_path() /
+                                                                        std::format("{}_{}{}", sender_name_gbk, file->id_, file_path.extension().string()));
+                                 } catch (std::exception &Exception) {
+                                     std::println("Rename file error: {}", Exception.what());
+                                 }
+
                              });
             std::println("Receive photo message: [chat_id:{}][from:{}]", chat_id, sender_name);
             break;
