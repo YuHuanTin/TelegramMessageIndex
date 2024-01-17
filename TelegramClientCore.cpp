@@ -180,62 +180,10 @@ void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Objec
             break;
         }
         case td_api::updateNewMessage::ID: {
-            auto update_new_message = td_api::move_object_as<td_api::updateNewMessage>(update);
-            auto chat_id            = update_new_message->message_->chat_id_;
-            std::string sender_name;
 
-            switch (update_new_message->message_->sender_id_->get_id()) {
-                case td_api::messageSenderUser::ID: {
-                    auto user = td_api::move_object_as<td_api::messageSenderUser>(
-                            update_new_message->message_->sender_id_);
-                    sender_name = get_user_name(user->user_id_);
-                    break;
-                }
-                case td_api::messageSenderChat::ID: {
-                    auto chat = td_api::move_object_as<td_api::messageSenderChat>(
-                            update_new_message->message_->sender_id_);
-                    sender_name = get_chat_title(chat->chat_id_);
-                    break;
-                }
-                default:
-                    // 处理未知的消息发送者类型
-                    break;
-            }
-
-
-            // 处理消息类型
-            switch (update_new_message->message_->content_->get_id()) {
-                case td_api::messageUnsupported::ID: {
-                    std::println("Receive unsupported message: [chat_id:{}][from:{}]", chat_id, sender_name);
-                    break;
-                }
-                case td_api::messageText::ID: {
-                    std::string text = td_api::move_object_as<td_api::messageText>(update_new_message->message_->content_)->text_->text_;
-                    std::println("Receive message: [chat_id:{}][from:{}][{}]", chat_id, sender_name, text);
-                    break;
-                }
-                case td_api::messagePhoto::ID: {
-                    auto photo_ = td_api::move_object_as<td_api::messagePhoto>(update_new_message->message_->content_);
-
-                    // always download bigest photo
-                    send_query(td_api::make_object<td_api::downloadFile>(photo_->photo_->sizes_.back()->photo_->id_, 32, 0, 0, true),
-                               [sender_name](Object object) {
-                                   auto file = td_api::move_object_as<td_api::file>(object);
-
-                                   // rename with send person name
-                                   std::filesystem::path file_path(file->local_->path_);
-                                   std::filesystem::rename(file_path, file_path.parent_path() / (sender_name + ".jpg"));
-                               });
-                    std::println("Receive photo message: [chat_id:{}][from:{}]", chat_id, sender_name);
-                    break;
-                }
-                default: {
-                    // 处理未知的消息类型
-                    std::println("Receive unknown message type: [chat_id:{}][from:{}]", chat_id, sender_name);
-                }
-            }
-
-
+            // 处理新消息
+            Functions::parse_update_message(this, td::move_tl_object_as<td_api::updateNewMessage>(update));
+            
             break;
         }
         default:

@@ -52,7 +52,9 @@ link_libraries(${TDLib_Lib_Files})
 
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
+find_package(Boost REQUIRED COMPONENTS locale)
 
+link_libraries(Boost::boost Boost::locale)
 link_libraries(ZLIB::ZLIB)
 link_libraries(OpenSSL::Crypto OpenSSL::SSL)
 link_libraries(ws2_32 CRYPT32 Normaliz Psapi)
@@ -62,4 +64,6 @@ add_executable(TelegramMessageIndex main.cpp
         Functions.cpp
         Functions.h
         TelegramClientCore.cpp
-        TelegramClientCore.h)
+        TelegramClientCore.h
+        Utils.cpp
+        Utils.h)
