@@ -186,6 +186,8 @@ void Functions::parse_update_message(TelegramClientCore *Core, td::tl::unique_pt
             Core->send_query(td_api::make_object<td_api::downloadFile>(photo_->photo_->sizes_.back()->photo_->id_, 32, 0, 0, true),
                              [sender_name](Object object) {
                                  auto                  file            = td_api::move_object_as<td_api::file>(object);
+                                 
+
                                  // rename with send person name
                                  std::filesystem::path file_path(file->local_->path_);
                                  std::string           sender_name_gbk = Utils::CodeConvert::utf8_to_gbk(sender_name);
