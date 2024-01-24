@@ -3,11 +3,11 @@
 //
 
 #include "TelegramClientCore.h"
+#include "Functions.h"
 
 #include <print>
 #include <iostream>
 #include <sstream>
-#include <filesystem>
 
 
 namespace td_api = td::td_api;
@@ -21,7 +21,7 @@ TelegramClientCore::TelegramClientCore() {
 }
 
 void TelegramClientCore::set_proxy_s5(std::string_view Proxy_Host, int32_t Proxy_Port) {
-    // …Ë÷√¥˙¿Ì≤¢«“≤ª–Ë“™≈–∂œ «∑Ò ß∞‹£¨“ÚŒ™ ß∞‹“≤¥¶¿Ì≤ª¡À
+    // ËÆæÁΩÆ‰ª£ÁêÜÂπ∂‰∏î‰∏çÈúÄË¶ÅÂà§Êñ≠ÊòØÂê¶Â§±Ë¥•ÔºåÂõ†‰∏∫Â§±Ë¥•‰πüÂ§ÑÁêÜ‰∏ç‰∫Ü
     auto obj_add_proxy = td_api::make_object<td_api::addProxy>();
     obj_add_proxy->server_ = Proxy_Host;
     obj_add_proxy->port_ = Proxy_Port;
@@ -44,8 +44,7 @@ void TelegramClientCore::loop() {
                          "[m <chat_id> <text>]: send message\n"
                          "[me]: show self\n"
                          "[l]: logout\n"
-                         "[history]: get history message"
-            );
+                         "[history]: get history message");
 
             std::string line;
             std::getline(std::cin, line);
@@ -59,19 +58,13 @@ void TelegramClientCore::loop() {
             }
             if (action == "u") {
                 std::println("Requesting updates...");
-                while (true) {
-                    auto response = client_manager_->receive(0);
-                    if (response.object) {
-                        process_response(std::move(response));
-                    } else {
-                        break;
-                    }
-                }
+
+                update();
             } else if (action == "close") {
                 std::println("Closing...");
                 send_query(td_api::make_object<td_api::close>(), {});
             } else if (action == "me") {
-                send_query(td_api::make_object<td_api::getMe>(), [this](Object object) {
+                send_query(td_api::make_object<td_api::getMe>(), [](Object object) {
                     std::println("Self: {}", to_string(object));
                 });
             } else if (action == "l") {
@@ -105,7 +98,7 @@ void TelegramClientCore::loop() {
                     }
                 });
             } else if (action == "history") {
-                Functions::get_history_messages(this);
+                Functions::func_history(this);
             }
         }
     }
@@ -114,29 +107,6 @@ void TelegramClientCore::loop() {
 void TelegramClientCore::restart() {
     client_manager_.reset();
     *this = TelegramClientCore();
-}
-
-void TelegramClientCore::send_query(td::td_api::object_ptr<td::td_api::Function> f, std::function<void(Object)> handler) {
-    auto query_id = next_query_id();
-    if (handler) {
-        handlers_.emplace(query_id, std::move(handler));
-    }
-    client_manager_->send(client_id_, query_id, std::move(f));
-}
-
-void TelegramClientCore::process_response(td::ClientManager::Response response) {
-    if (!response.object) {
-        return;
-    }
-
-    if (response.request_id == 0) {
-        return process_update(std::move(response.object));
-    }
-    auto it = handlers_.find(response.request_id);
-    if (it != handlers_.end()) {
-        it->second(std::move(response.object));
-        handlers_.erase(it);
-    }
 }
 
 std::string TelegramClientCore::get_user_name(std::int64_t user_id) const {
@@ -153,6 +123,38 @@ std::string TelegramClientCore::get_chat_title(std::int64_t chat_id) const {
         return "unknown chat";
     }
     return it->second;
+}
+
+void TelegramClientCore::send_query(td::td_api::object_ptr<td::td_api::Function> f, std::function<void(Object)> handler) {
+    auto query_id = next_query_id();
+    if (handler) {
+        handlers_.emplace(query_id, std::move(handler));
+    }
+    client_manager_->send(client_id_, query_id, std::move(f));
+}
+
+void TelegramClientCore::update() {
+    while (true) {
+        auto response = client_manager_->receive(0);
+        if (!response.object)
+            break;
+        process_response(std::move(response));
+    }
+}
+
+void TelegramClientCore::process_response(td::ClientManager::Response response) {
+    if (!response.object) {
+        return;
+    }
+
+    if (response.request_id == 0) {
+        return process_update(std::move(response.object));
+    }
+    auto it = handlers_.find(response.request_id);
+    if (it != handlers_.end()) {
+        it->second(std::move(response.object));
+        handlers_.erase(it);
+    }
 }
 
 void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Object> update) {
@@ -180,10 +182,11 @@ void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Objec
             break;
         }
         case td_api::updateNewMessage::ID: {
+            auto &&update_ref = td_api::move_object_as<td_api::updateNewMessage>(update);
 
-            // ¥¶¿Ì–¬œ˚œ¢
-            Functions::parse_update_message(this, td::move_tl_object_as<td_api::updateNewMessage>(update));
-            
+            // Â§ÑÁêÜÊñ∞Ê∂àÊÅØ
+            Functions::parse_update_message(this, td_api::move_object_as<td::td_api::message>(update_ref->message_));
+
             break;
         }
         default:
@@ -240,18 +243,15 @@ void TelegramClientCore::on_authorization_state_update() {
             std::println("Enter email authentication code: ");
             std::string code;
             std::cin >> code;
-            send_query(
-                    td_api::make_object<td_api::checkAuthenticationEmailCode>(
-                            td_api::make_object<td_api::emailAddressAuthenticationCode>(code)),
-                    create_authentication_query_handler());
+            send_query(td_api::make_object<td_api::checkAuthenticationEmailCode>(td_api::make_object<td_api::emailAddressAuthenticationCode>(code)),
+                       create_authentication_query_handler());
             break;
         }
         case td_api::authorizationStateWaitCode::ID: {
             std::println("Enter authentication code: ");
             std::string code;
             std::cin >> code;
-            send_query(td_api::make_object<td_api::checkAuthenticationCode>(code),
-                       create_authentication_query_handler());
+            send_query(td_api::make_object<td_api::checkAuthenticationCode>(code), create_authentication_query_handler());
             break;
         }
         case td_api::authorizationStateWaitRegistration::ID: {
@@ -261,21 +261,18 @@ void TelegramClientCore::on_authorization_state_update() {
             std::cin >> first_name;
             std::println("Enter your last name: ");
             std::cin >> last_name;
-            send_query(td_api::make_object<td_api::registerUser>(first_name, last_name),
-                       create_authentication_query_handler());
+            send_query(td_api::make_object<td_api::registerUser>(first_name, last_name), create_authentication_query_handler());
             break;
         }
         case td_api::authorizationStateWaitPassword::ID: {
             std::println("Enter authentication password: ");
             std::string password;
             std::getline(std::cin, password);
-            send_query(td_api::make_object<td_api::checkAuthenticationPassword>(password),
-                       create_authentication_query_handler());
+            send_query(td_api::make_object<td_api::checkAuthenticationPassword>(password), create_authentication_query_handler());
             break;
         }
         case td_api::authorizationStateWaitOtherDeviceConfirmation::ID: {
-            auto state = td_api::move_object_as<td_api::authorizationStateWaitOtherDeviceConfirmation>(
-                    authorization_state_);
+            auto state = td_api::move_object_as<td_api::authorizationStateWaitOtherDeviceConfirmation>(authorization_state_);
             std::println("Confirm this login link on another device: {}", state->link_);
             break;
         }
