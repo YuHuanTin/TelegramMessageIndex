@@ -33,6 +33,7 @@ ProgramConfig::ProgramConfig() {
     this->mapRegisterdName[proxy_host]              = "proxy_host";
     this->mapRegisterdName[proxy_port]              = "proxy_port";
     this->mapRegisterdName[last_login_phone_number] = "last_login_phone_number";
+    this->mapRegisterdName[spy_picture_by_id_list] = "spy_picture_by_id_list";
 
     // read config
     std::string                                       line;
@@ -58,6 +59,18 @@ std::string ProgramConfig::read(NAME Key) {
     return this->mapConfigValue[it->second];
 }
 
+std::vector<std::string> ProgramConfig::read_lists(ProgramConfig::NAME Key) {
+    auto                     v = read(Key);
+    // split by ';' from single line
+    std::stringstream        ss(v);
+    std::string              item;
+    std::vector<std::string> vecResult;
+    while (std::getline(ss, item, ';')) {
+        vecResult.push_back(item);
+    }
+    return vecResult;
+}
+
 bool ProgramConfig::write(NAME Key, const std::string &Value) {
     auto it = std::find_if(this->mapRegisterdName.begin(), this->mapRegisterdName.end(), [Key](auto &item) {
         return item.first == Key;
@@ -65,6 +78,20 @@ bool ProgramConfig::write(NAME Key, const std::string &Value) {
     if (it == this->mapRegisterdName.end())
         return false;
     this->mapConfigValue[it->second] = Value;
+    return true;
+}
+
+bool ProgramConfig::write_lists(ProgramConfig::NAME Key, const std::vector<std::string> &Value) {
+    auto it = std::find_if(this->mapRegisterdName.begin(), this->mapRegisterdName.end(), [Key](auto &item) {
+        return item.first == Key;
+    });
+    if (it == this->mapRegisterdName.end())
+        return false;
+    std::stringstream ss;
+    std::for_each(Value.begin(), Value.end(), [&ss](const auto &item) {
+        ss << item << ';';
+    });
+    this->mapConfigValue[it->second] = ss.str();
     return true;
 }
 

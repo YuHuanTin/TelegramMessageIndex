@@ -25,3 +25,22 @@ TEST_CASE("WriteProgramConfigTest", "[ProgramConfig]") {
     std::println("proxyHost: {}, proxyPort: {}, lastLoginPhoneNumber: {}", programConfig.read(ProgramConfig::proxy_host),
                  programConfig.read(ProgramConfig::proxy_port), programConfig.read(ProgramConfig::last_login_phone_number));
 }
+
+TEST_CASE("ReadListToProgramConfigTest", "[ProgramConfig]") {
+    ProgramConfig programConfig;
+    auto          v = programConfig.read_lists(ProgramConfig::spy_picture_by_id_list);
+    for (auto     &i: v) {
+        std::println("{}", i);
+    }
+}
+
+TEST_CASE("WriteListToProgramConfigTest", "[ProgramConfig]") {
+    ProgramConfig programConfig;
+
+    programConfig.write_lists(ProgramConfig::spy_picture_by_id_list, {"1", "2", "3"});
+    auto      v = programConfig.read_lists(ProgramConfig::spy_picture_by_id_list);
+    for (auto &i: v) {
+        std::println("{}", i);
+    }
+}
+

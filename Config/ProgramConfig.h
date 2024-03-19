@@ -16,7 +16,8 @@ public:
     enum NAME {
         proxy_host,
         proxy_port,
-        last_login_phone_number
+        last_login_phone_number,
+        spy_picture_by_id_list
     };
 private:
     std::fstream file;
@@ -36,6 +37,8 @@ public:
      */
     std::string read(NAME Key);
 
+    std::vector<std::string> read_lists(NAME Key);
+
     /**
      * 将配置写入内存 map
      * @param Key 
@@ -43,6 +46,8 @@ public:
      * @return 
      */
     bool write(NAME Key, const std::string &Value);
+
+    bool write_lists(NAME Key, const std::vector<std::string> &Value);
 
     /**
      * 真正写入配置到文件中去
