@@ -17,44 +17,41 @@ void open_log_file(std::unique_ptr<std::fstream> &PtrLog) {
     PtrLog = std::make_unique<std::fstream>("./log.txt", std::ios::out | std::ios::app | std::ios::binary);
 }
 
+auto default_text_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::messageText> Text) {
+    std::println("Receive message: [chat_id:{}, title:{}][from:{}][{}]",
+                 Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Text->text_->text_);
+}
 
-auto parse_message(TelegramClientCore *Core, td::td_api::object_ptr<td::td_api::message> Message) {
-    auto messageParser = std::make_shared<MessageParser>(Core, std::move(Message));
-    messageParser->set_content_text([messageParser](td::tl::unique_ptr<td::td_api::messageText> Text) {
-        std::println("Receive message: [chat_id:{}, title:{}][from:{}][{}]", messageParser->get_chat_id(), messageParser->get_chat_title(),
-                     messageParser->get_sender_name(), Text->text_->text_);
-    }).set_content_photo([messageParser](td::tl::unique_ptr<td::td_api::file> File) {
-        std::println("Receive photo message: [chat_id:{}, title:{}][from:{}]", messageParser->get_chat_id(), messageParser->get_chat_title(),
-                     messageParser->get_sender_name());
-        // rename with send person name
-        std::filesystem::path file_path(File->local_->path_);
+auto default_photo_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
+    std::println("Receive photo message: [chat_id:{}, title:{}][from:{}]",
+                 Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name());
+    // rename with send person name
+    std::filesystem::path file_path(File->local_->path_);
 
-        std::string str = messageParser->get_sender_name();
-        std::for_each(str.begin(), str.end(), [](char &c) {
-            switch (c) {
-                case '\\':
-                case '/':
-                case ':':
-                case '*':
-                case '?':
-                case '"':
-                case '<':
-                case '>':
-                case '|':
-                    c = '_';
-                    break;
-                default:
-                    break;
-            }
-        });
-        try {
-            std::filesystem::rename(file_path, file_path.parent_path() /
-                                               std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
-        } catch (std::exception &Exception) {
-            std::println("Rename file error: {}", Exception.what());
+    std::string str = Parser->get_sender_name();
+    std::for_each(str.begin(), str.end(), [](char &c) {
+        switch (c) {
+            case '\\':
+            case '/':
+            case ':':
+            case '*':
+            case '?':
+            case '"':
+            case '<':
+            case '>':
+            case '|':
+                c = '_';
+                break;
+            default:
+                break;
         }
     });
-    messageParser->parse_content();
+    try {
+        std::filesystem::rename(file_path, file_path.parent_path() /
+                                           std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
+    } catch (std::exception &Exception) {
+        std::println("Rename file error: {}", Exception.what());
+    }
 }
 
 void Functions::func_history(TelegramClientCore *Core) {
@@ -112,8 +109,11 @@ void Functions::func_history(TelegramClientCore *Core) {
             for (auto iterator = messages->messages_.begin(); iterator != messages->messages_.end(); ++iterator) {
                 auto message = td::move_tl_object_as<td::td_api::message>(*iterator);
 
-                parse_message(Core, std::move(message));
-                
+
+                auto messageParser = std::make_shared<MessageParser>(Core, std::move(message));
+                messageParser->set_content_text(default_text_parser);
+                messageParser->set_content_photo(default_photo_parser);
+
 
                 // get message text
 //                std::string message_text;
@@ -162,6 +162,19 @@ void Functions::func_history(TelegramClientCore *Core) {
     }
 }
 
-void Functions::parse_update_message(TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {
-    parse_message(Core, std::move(Message));
+void Functions::func_parse_update_message(TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {
+    auto messageParser = std::make_shared<MessageParser>(Core, std::move(Message));
+    messageParser->set_content_text(default_text_parser);
+    messageParser->set_content_photo(default_photo_parser);
+    messageParser->parse_content();
+}
+
+void Functions::func_spy_picture_by_id(TelegramClientCore *Core) {
+    auto messageParser = std::make_shared<MessageParser>(Core, nullptr);
+    messageParser->set_content_photo([](MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
+        // todo
+        std::println("Receive photo message: [chat_id:{}, title:{}][from:{}]",
+                     Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name());
+    });
+
 }

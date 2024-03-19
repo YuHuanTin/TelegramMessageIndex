@@ -34,7 +34,7 @@ void MessageParser::parse_content() {
     // parse message content
     switch (message_->content_->get_id()) {
         case td::td_api::messageText::ID: {
-            parse_text_(td::move_tl_object_as<td::td_api::messageText>(message_->content_));
+            parse_text_(this, td::move_tl_object_as<td::td_api::messageText>(message_->content_));
             break;
         }
         case td::td_api::messagePhoto::ID: {
@@ -51,7 +51,7 @@ void MessageParser::parse_content() {
                                       return;
                                   }
 
-                                  shared_this->parse_photo_(td::move_tl_object_as<td::td_api::file>(object));
+                                  shared_this->parse_photo_(shared_this.get(), td::move_tl_object_as<td::td_api::file>(object));
                               });
             break;
         }

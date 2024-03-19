@@ -62,8 +62,8 @@ add_compile_options("/utf-8")
 add_executable(TelegramMessageIndex main.cpp
         Functions.cpp
         Functions.h
-        TelegramClientCore.cpp
-        TelegramClientCore.h
+        Core/TelegramClientCore.cpp
+        Core/TelegramClientCore.h
         Parser/MessageParser.cpp
         Parser/MessageParser.h
 )

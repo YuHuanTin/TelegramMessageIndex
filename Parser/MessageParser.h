@@ -7,7 +7,7 @@
 
 #include "td/telegram/td_api.h"
 #include "td/telegram/td_api.hpp"
-#include "../TelegramClientCore.h"
+#include "../Core/TelegramClientCore.h"
 
 
 class MessageParser : public std::enable_shared_from_this<MessageParser> {
@@ -17,12 +17,12 @@ private:
     td::tl::unique_ptr<td::td_api::message> message_;
 
     // message sender
-    [[maybe_unused]] td::td_api::int53                                    sender_id_;
-    std::string                                                           sender_name_;
+    [[maybe_unused]] td::td_api::int53                                                     sender_id_;
+    std::string                                                                            sender_name_;
 
     // message content parse function
-    std::function<void(td::tl::unique_ptr<td::td_api::messageText> Text)> parse_text_;
-    std::function<void(td::tl::unique_ptr<td::td_api::file>)>             parse_photo_;
+    std::function<void(MessageParser *, td::tl::unique_ptr<td::td_api::messageText> Text)> parse_text_;
+    std::function<void(MessageParser *, td::tl::unique_ptr<td::td_api::file>)>             parse_photo_;
 
 public:
     explicit MessageParser(TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message);
@@ -35,13 +35,13 @@ public:
 
     [[maybe_unused]][[nodiscard]] td::td_api::int53 get_sender_id() const;
 
-    template<typename PRED>
+    template<typename PRED, typename THIS = MessageParser, typename TEXT_ = td::tl::unique_ptr<td::td_api::messageText>>
     MessageParser &set_content_text(PRED &&Predicate) {
         parse_text_ = std::forward<PRED>(Predicate);
         return *this;
     }
 
-    template<typename PRED>
+    template<typename PRED, typename THIS = MessageParser, typename FILE_ = td::tl::unique_ptr<td::td_api::file>>
     MessageParser &set_content_photo(PRED &&Predicate) {
         parse_photo_ = std::forward<PRED>(Predicate);
         return *this;

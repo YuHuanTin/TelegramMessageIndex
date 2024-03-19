@@ -3,7 +3,7 @@
 //
 
 #include "TelegramClientCore.h"
-#include "Functions.h"
+#include "../Functions.h"
 
 #include <print>
 #include <iostream>
@@ -44,8 +44,9 @@ void TelegramClientCore::loop() {
                          "[m <chat_id> <text>]: send message\n"
                          "[me]: show self\n"
                          "[l]: logout\n"
-                         "[history]: get history message");
-
+                         "[history]: get history message\n"
+                         "[spy_picture_by_id]: spy user id send picture");
+            
             std::string line;
             std::getline(std::cin, line);
             std::istringstream ss(line);
@@ -53,15 +54,16 @@ void TelegramClientCore::loop() {
             if (!(ss >> action)) {
                 continue;
             }
+
             if (action == "q") {
                 return;
-            }
-            if (action == "u") {
+            } else if (action == "u") {
                 std::println("Requesting updates...");
 
                 update();
             } else if (action == "close") {
                 std::println("Closing...");
+
                 send_query(td_api::make_object<td_api::close>(), {});
             } else if (action == "me") {
                 send_query(td_api::make_object<td_api::getMe>(), [](Object object) {
@@ -69,6 +71,7 @@ void TelegramClientCore::loop() {
                 });
             } else if (action == "l") {
                 std::println("Logging out...");
+
                 send_query(td_api::make_object<td_api::logOut>(), {});
             } else if (action == "m") {
                 std::int64_t chat_id;
@@ -99,6 +102,8 @@ void TelegramClientCore::loop() {
                 });
             } else if (action == "history") {
                 Functions::func_history(this);
+            } else if (action == "spy_picture_by_id") {
+                Functions::func_spy_picture_by_id(this);
             }
         }
     }
@@ -185,7 +190,7 @@ void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Objec
             auto &&update_ref = td_api::move_object_as<td_api::updateNewMessage>(update);
 
             // 处理新消息
-            Functions::parse_update_message(this, td_api::move_object_as<td::td_api::message>(update_ref->message_));
+            Functions::func_parse_update_message(this, td_api::move_object_as<td::td_api::message>(update_ref->message_));
 
             break;
         }

@@ -4,7 +4,7 @@
 #include <print>
 #include <iostream>
 
-#include "TelegramClientCore.h"
+#include "Core/TelegramClientCore.h"
 
 
 std::tuple<std::string, int32_t> get_s5_proxy_from_input() {
