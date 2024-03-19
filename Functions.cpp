@@ -13,10 +13,6 @@
 #include "Parser/MessageParser.h"
 
 
-void open_log_file(std::unique_ptr<std::fstream> &PtrLog) {
-    PtrLog = std::make_unique<std::fstream>("./log.txt", std::ios::out | std::ios::app | std::ios::binary);
-}
-
 auto default_text_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::messageText> Text) {
     std::println("Receive message: [chat_id:{}, title:{}][from:{}][{}]",
                  Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Text->text_->text_);
@@ -54,7 +50,7 @@ auto default_photo_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::
     }
 }
 
-void Functions::func_history(TelegramClientCore *Core) {
+void Functions::func_history() {
     /// get chat id
     td::td_api::int53 chat_id = 0;
     std::cin >> chat_id;
@@ -79,7 +75,7 @@ void Functions::func_history(TelegramClientCore *Core) {
 
         bool wait = true;
 
-        Core->send_query(std::move(obj_get_chat_history), [Core, &lastMessageID, &wait](td::td_api::object_ptr<td::td_api::Object> object) {
+        core_->send_query(std::move(obj_get_chat_history), [this, &lastMessageID, &wait](td::td_api::object_ptr<td::td_api::Object> object) {
             // if recv error return
             if (object->get_id() == td::td_api::error::ID) {
                 std::println("Error: {}", to_string(object));
@@ -110,7 +106,7 @@ void Functions::func_history(TelegramClientCore *Core) {
                 auto message = td::move_tl_object_as<td::td_api::message>(*iterator);
 
 
-                auto messageParser = std::make_shared<MessageParser>(Core, std::move(message));
+                auto messageParser = std::make_shared<MessageParser>(core_, std::move(message));
                 messageParser->set_content_text(default_text_parser);
                 messageParser->set_content_photo(default_photo_parser);
 
@@ -155,26 +151,104 @@ void Functions::func_history(TelegramClientCore *Core) {
         });
 
         while (wait) {
-            Core->update();
+            core_->update();
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
-void Functions::func_parse_update_message(TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {
-    auto messageParser = std::make_shared<MessageParser>(Core, std::move(Message));
+void Functions::func_parse_update_message(td::tl::unique_ptr<td::td_api::message> Message) {
+    if (this->message_parser_ != nullptr) {
+        this->message_parser_(core_, std::move(Message));
+        return;
+    }
+
+    // default message parser
+    auto messageParser = std::make_shared<MessageParser>(core_, std::move(Message));
     messageParser->set_content_text(default_text_parser);
     messageParser->set_content_photo(default_photo_parser);
     messageParser->parse_content();
 }
 
-void Functions::func_spy_picture_by_id(TelegramClientCore *Core) {
-    auto messageParser = std::make_shared<MessageParser>(Core, nullptr);
-    messageParser->set_content_photo([](MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
-        // todo
-        std::println("Receive photo message: [chat_id:{}, title:{}][from:{}]",
-                     Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name());
-    });
+void Functions::func_spy_picture_by_id() {
+    auto vecSpyUserIds = configServicePtr->read_lists(ProgramConfig::spy_picture_by_id_list);
 
+    bool reInput = true;
+    if (!vecSpyUserIds.empty()) {
+        reInput = false;
+        std::println("Current spy user id: ");
+        for (auto &i: vecSpyUserIds) {
+            std::println("{}", i);
+        }
+
+        std::println("Use this list for spy? (y/n)");
+        std::string answer;
+        std::cin >> answer;
+        if (answer != "y" && answer != "Y") {
+            reInput = true;
+        }
+    }
+
+    while (reInput) {
+        std::println("please input user id or 'break' to exit input");
+
+        std::string userId;
+        std::cin >> userId;
+        if (userId == "break") {
+            break;
+        }
+        vecSpyUserIds.push_back(std::move(userId));
+    }
+
+    configServicePtr->write_lists(ProgramConfig::spy_picture_by_id_list, vecSpyUserIds);
+    configServicePtr->refresh();
+
+    // loop
+    auto old_message_parser = this->message_parser_;
+    this->message_parser_ = [](TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {
+        auto messageParser = std::make_shared<MessageParser>(Core, std::move(Message));
+        messageParser->set_content_photo([](MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
+            std::println("Receive photo message: [chat_id:{}, title:{}][from:{}] [sender_id:{}]",
+                         Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Parser->get_sender_id());
+            // rename with send person name
+            std::filesystem::path file_path(File->local_->path_);
+
+            std::string str = Parser->get_sender_name();
+            std::for_each(str.begin(), str.end(), [](char &c) {
+                switch (c) {
+                    case '\\':
+                    case '/':
+                    case ':':
+                    case '*':
+                    case '?':
+                    case '"':
+                    case '<':
+                    case '>':
+                    case '|':
+                        c = '_';
+                        break;
+                    default:
+                        break;
+                }
+            });
+            try {
+                std::filesystem::rename(file_path, file_path.parent_path() /
+                                                   std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
+            } catch (std::exception &Exception) {
+                std::println("Rename file error: {}", Exception.what());
+            }
+        });
+        messageParser->parse_content();
+    };
+
+    while (true) {
+        core_->update();
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+    this->message_parser_ = old_message_parser;
 }
+
+Functions::Functions(TelegramClientCore *Core, std::shared_ptr<ProgramConfig> ProgramConfig_)
+        : core_(Core), configServicePtr(std::move(ProgramConfig_)) {}

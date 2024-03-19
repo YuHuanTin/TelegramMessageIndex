@@ -105,7 +105,7 @@ bool ProgramConfig::refresh() {
         this->file << item.first << ":" << item.second << '\n';
     });
 
-    return false;
+    return true;
 }
 
 ProgramConfig::~ProgramConfig() {

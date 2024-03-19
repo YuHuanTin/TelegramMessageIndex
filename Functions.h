@@ -5,19 +5,25 @@
 #ifndef TELEGRAMMESSAGEINDEX_FUNCTIONS_H
 #define TELEGRAMMESSAGEINDEX_FUNCTIONS_H
 
-
+#include "Config/ProgramConfig.h"
 #include "Core/TelegramClientCore.h"
 
 class TelegramClientCore;
 
 class Functions {
+    std::function<void(TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message>)> message_parser_;
+
+    std::shared_ptr<ProgramConfig> configServicePtr;
+
+    TelegramClientCore *core_;
 public:
+    explicit Functions(TelegramClientCore *Core, std::shared_ptr<ProgramConfig> ProgramConfig_);
 
-    static void func_history(TelegramClientCore *Core);
+    void func_history();
 
-    static void func_parse_update_message(TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message);
+    void func_parse_update_message(td::tl::unique_ptr<td::td_api::message> Message);
 
-    static void func_spy_picture_by_id(TelegramClientCore *Core);
+    void func_spy_picture_by_id();
 };
 
 

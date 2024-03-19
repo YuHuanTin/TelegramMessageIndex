@@ -34,10 +34,16 @@ void MessageParser::parse_content() {
     // parse message content
     switch (message_->content_->get_id()) {
         case td::td_api::messageText::ID: {
+            if (parse_text_ == nullptr) {
+                break;
+            }
             parse_text_(this, td::move_tl_object_as<td::td_api::messageText>(message_->content_));
             break;
         }
         case td::td_api::messagePhoto::ID: {
+            if (parse_photo_ == nullptr) {
+                break;
+            }
             // send downlaod photo request
             auto               photo_content = td::move_tl_object_as<td::td_api::messagePhoto>(message_->content_);
             core_->send_query(td::td_api::make_object<td::td_api::downloadFile>(photo_content->photo_->sizes_.back()->photo_->id_, 32, 0, 0, true),
@@ -50,7 +56,7 @@ void MessageParser::parse_content() {
                                       std::println("Error: object is nullptr");
                                       return;
                                   }
-
+                                  
                                   shared_this->parse_photo_(shared_this.get(), td::move_tl_object_as<td::td_api::file>(object));
                               });
             break;

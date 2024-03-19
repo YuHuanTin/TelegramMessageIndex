@@ -14,7 +14,7 @@
 namespace td_api = td::td_api;
 
 TelegramClientCore::TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_)
-        : configServicePtr(std::move(ProgramConfig_)) {
+        : configServicePtr(std::move(ProgramConfig_)), functionsPtr(std::make_unique<Functions>(this, configServicePtr)) {
     td::ClientManager::execute(td_api::make_object<td_api::setLogVerbosityLevel>(2));
     client_manager_ = std::make_unique<td::ClientManager>();
     client_id_ = client_manager_->create_client_id();
@@ -103,9 +103,9 @@ void TelegramClientCore::loop() {
                     }
                 });
             } else if (action == "history") {
-                Functions::func_history(this);
+                functionsPtr->func_history();
             } else if (action == "spy_picture_by_id") {
-                Functions::func_spy_picture_by_id(this);
+                functionsPtr->func_spy_picture_by_id();
             }
         }
     }
@@ -191,8 +191,9 @@ void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Objec
         case td_api::updateNewMessage::ID: {
             auto &&update_ref = td_api::move_object_as<td_api::updateNewMessage>(update);
 
+
             // 处理新消息
-            Functions::func_parse_update_message(this, td_api::move_object_as<td::td_api::message>(update_ref->message_));
+            functionsPtr->func_parse_update_message(td_api::move_object_as<td::td_api::message>(update_ref->message_));
 
             break;
         }

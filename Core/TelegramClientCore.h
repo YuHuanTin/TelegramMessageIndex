@@ -16,7 +16,10 @@
 #include <td/telegram/td_api.h>
 #include <td/telegram/td_api.hpp>
 #include "../Config/ProgramConfig.h"
+#include "../Functions.h"
 
+
+class Functions;
 
 class TelegramClientCore {
 private:
@@ -40,6 +43,7 @@ private:
      */
 
     std::shared_ptr<ProgramConfig> configServicePtr;
+    std::unique_ptr<Functions>          functionsPtr;
 public:
 
     explicit TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_);
