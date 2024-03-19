@@ -8,11 +8,13 @@
 #include <print>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 
 namespace td_api = td::td_api;
 
-TelegramClientCore::TelegramClientCore() {
+TelegramClientCore::TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_)
+        : configServicePtr(std::move(ProgramConfig_)) {
     td::ClientManager::execute(td_api::make_object<td_api::setLogVerbosityLevel>(2));
     client_manager_ = std::make_unique<td::ClientManager>();
     client_id_ = client_manager_->create_client_id();
@@ -46,7 +48,7 @@ void TelegramClientCore::loop() {
                          "[l]: logout\n"
                          "[history]: get history message\n"
                          "[spy_picture_by_id]: spy user id send picture");
-            
+
             std::string line;
             std::getline(std::cin, line);
             std::istringstream ss(line);
@@ -111,7 +113,7 @@ void TelegramClientCore::loop() {
 
 void TelegramClientCore::restart() {
     client_manager_.reset();
-    *this = TelegramClientCore();
+    *this = TelegramClientCore(configServicePtr);
 }
 
 std::string TelegramClientCore::get_user_name(std::int64_t user_id) const {
@@ -227,12 +229,29 @@ void TelegramClientCore::on_authorization_state_update() {
             std::println("Terminated");
             break;
         case td_api::authorizationStateWaitPhoneNumber::ID: {
+            /**
+             * 这里使用配置项储存最近登录的手机号码
+             */
+            auto last_login_phone_number = configServicePtr->read(ProgramConfig::last_login_phone_number);
+            if (!last_login_phone_number.empty()) {
+                std::println("Use last login phone number: {} ?(y/n)", last_login_phone_number);
+                char use_last_login_phone_number;
+                std::cin >> use_last_login_phone_number;
+                if (use_last_login_phone_number == 'y' || use_last_login_phone_number == 'Y') {
+                    send_query(td_api::make_object<td_api::setAuthenticationPhoneNumber>(last_login_phone_number, nullptr),
+                               create_authentication_query_handler());
+                    break;
+                }
+            }
             std::println("Enter phone number: ");
             std::string phone_number;
             std::cin >> phone_number;
-            send_query(
-                    td_api::make_object<td_api::setAuthenticationPhoneNumber>(phone_number, nullptr),
-                    create_authentication_query_handler());
+
+            configServicePtr->write(ProgramConfig::last_login_phone_number, phone_number);
+            configServicePtr->refresh();
+
+            send_query(td_api::make_object<td_api::setAuthenticationPhoneNumber>(phone_number, nullptr),
+                       create_authentication_query_handler());
             break;
         }
         case td_api::authorizationStateWaitEmailAddress::ID: {

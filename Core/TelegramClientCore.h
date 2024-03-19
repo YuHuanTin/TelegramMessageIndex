@@ -15,6 +15,7 @@
 #include <td/telegram/Client.h>
 #include <td/telegram/td_api.h>
 #include <td/telegram/td_api.hpp>
+#include "../Config/ProgramConfig.h"
 
 
 class TelegramClientCore {
@@ -22,20 +23,26 @@ private:
     using Object = td::td_api::object_ptr<td::td_api::Object>;
 
     std::unique_ptr<td::ClientManager> client_manager_;
-    std::int32_t  client_id_{0};
-    bool          are_authorized_ = false;
-    bool          need_restart_   = false;
-    std::uint64_t current_query_id_{0};
-    std::uint64_t authentication_query_id_{0};
+    std::int32_t                        client_id_{0};
+    bool                                are_authorized_ = false;
+    bool                                need_restart_   = false;
+    std::uint64_t                       current_query_id_{0};
+    std::uint64_t                       authentication_query_id_{0};
 
     td::td_api::object_ptr<td::td_api::AuthorizationState> authorization_state_;
     std::map<std::uint64_t, std::function<void(Object)>>   handlers_;
 
     std::map<std::int64_t, td::td_api::object_ptr<td::td_api::user>> users_;
-    std::map<std::int64_t, std::string>                    chat_title_;
+    std::map<std::int64_t, std::string> chat_title_;
+
+    /**
+     * user defined
+     */
+
+    std::shared_ptr<ProgramConfig> configServicePtr;
 public:
 
-    TelegramClientCore();
+    explicit TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_);
 
     void set_proxy_s5(std::string_view Proxy_Host, int32_t Proxy_Port);
 

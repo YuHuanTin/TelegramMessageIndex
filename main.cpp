@@ -4,6 +4,7 @@
 #include <print>
 #include <iostream>
 
+#include "Config/ProgramConfig.h"
 #include "Core/TelegramClientCore.h"
 
 
@@ -33,12 +34,27 @@ int main() {
     std::locale::global(std::locale("zh_CN.UTF-8"));
 
 
-    const auto [s5_proxy, s5_proxy_port] = get_s5_proxy_from_input();
-    
-    TelegramClientCore example;
-    if (!s5_proxy.empty()) {
-        example.set_proxy_s5(s5_proxy, s5_proxy_port);
+    auto configService = std::make_shared<ProgramConfig>();
+    auto proxyHost     = configService->read(ProgramConfig::proxy_host);
+    auto proxyPort     = configService->read(ProgramConfig::proxy_port);
+
+    if (!proxyHost.empty() && !proxyPort.empty()) {
+        std::println("load config proxy host: {}\n"
+                     "load config proxy port: {}", proxyHost, proxyPort);
+    } else {
+        const auto [s5_proxy, s5_proxy_port] = get_s5_proxy_from_input();
+        if (!s5_proxy.empty()) {
+            configService->write(ProgramConfig::proxy_host, s5_proxy);
+            configService->write(ProgramConfig::proxy_port, std::to_string(s5_proxy_port));
+            configService->refresh();
+            proxyHost = s5_proxy;
+            proxyPort = std::to_string(s5_proxy_port);
+        }
+    }
+
+    TelegramClientCore example(configService);
+    if (!proxyHost.empty() && !proxyPort.empty()) {
+        example.set_proxy_s5(proxyHost, stol(proxyPort));
     }
     example.loop();
-
 }
