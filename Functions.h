@@ -15,6 +15,7 @@ class Functions {
 
     std::shared_ptr<ProgramConfig> configServicePtr;
 
+    // not owned just for use
     TelegramClientCore *core_;
 public:
     explicit Functions(TelegramClientCore *Core, std::shared_ptr<ProgramConfig> ProgramConfig_);

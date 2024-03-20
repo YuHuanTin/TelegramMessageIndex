@@ -37,6 +37,11 @@ public:
      */
     std::string read(NAME Key);
 
+    /**
+     * 从内存 map 中读取列表配置
+     * @param Key 
+     * @return 
+     */
     std::vector<std::string> read_lists(NAME Key);
 
     /**
@@ -47,6 +52,12 @@ public:
      */
     bool write(NAME Key, const std::string &Value);
 
+    /**
+     * 将列表配置写入内存 map
+     * @param Key 
+     * @param Value 
+     * @return 
+     */
     bool write_lists(NAME Key, const std::vector<std::string> &Value);
 
     /**
