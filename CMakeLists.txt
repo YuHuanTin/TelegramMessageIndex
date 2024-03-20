@@ -72,6 +72,8 @@ set(COMPILE_FILES
         Parser/MessageParser.h
         Config/ProgramConfig.cpp
         Config/ProgramConfig.h
+        ConsoleCtrlCapturer.cpp
+        ConsoleCtrlCapturer.h
 )
 
 add_executable(TelegramMessageIndex

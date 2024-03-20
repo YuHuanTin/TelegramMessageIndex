@@ -11,6 +11,7 @@
 #include <filesystem>
 
 #include "Parser/MessageParser.h"
+#include "ConsoleCtrlCapturer.h"
 
 
 auto default_text_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::messageText> Text) {
@@ -171,28 +172,23 @@ void Functions::func_parse_update_message(td::tl::unique_ptr<td::td_api::message
     messageParser->parse_content();
 }
 
-void Functions::func_spy_picture_by_id() {
-    auto vecSpyUserIds = configServicePtr->read_lists(ProgramConfig::spy_picture_by_id_list);
-
-    bool reInput = true;
-    if (!vecSpyUserIds.empty()) {
-        reInput = false;
-        std::println("Current spy user id: ");
-        for (auto &i: vecSpyUserIds) {
-            std::println("{}", i);
-        }
-
-        std::println("Use this list for spy? (y/n)");
-        std::string answer;
-        std::cin >> answer;
-        if (answer != "y" && answer != "Y") {
-            reInput = true;
-        }
+void print_spy_user_ids(const std::vector<std::string> &vecSpyUserIds) {
+    std::cout << "Current spy user id: \n";
+    for (const auto &i: vecSpyUserIds) {
+        std::cout << i << '\n';
     }
+}
 
-    while (reInput) {
-        std::println("please input user id or 'break' to exit input");
+bool confirm_use_list_for_spy() {
+    std::cout << "Use this list for spy? (y/n)\n";
+    std::string answer;
+    std::cin >> answer;
+    return (answer == "y" || answer == "Y");
+}
 
+void reinput_user_ids(std::vector<std::string> &vecSpyUserIds) {
+    while (true) {
+        std::cout << "please input user id or 'break' to exit input\n";
         std::string userId;
         std::cin >> userId;
         if (userId == "break") {
@@ -200,11 +196,26 @@ void Functions::func_spy_picture_by_id() {
         }
         vecSpyUserIds.push_back(std::move(userId));
     }
+}
+
+void Functions::func_spy_picture_by_id() {
+    auto vecSpyUserIds = configServicePtr->read_lists(ProgramConfig::spy_picture_by_id_list);
+
+    if (!vecSpyUserIds.empty()) {
+        print_spy_user_ids(vecSpyUserIds);
+
+        if (!confirm_use_list_for_spy()) {
+            reinput_user_ids(vecSpyUserIds);
+        }
+    } else {
+        reinput_user_ids(vecSpyUserIds);
+    }
 
     configServicePtr->write_lists(ProgramConfig::spy_picture_by_id_list, vecSpyUserIds);
     configServicePtr->refresh();
 
-    // loop
+
+    /// loop
     auto old_message_parser = this->message_parser_;
     this->message_parser_ = [](TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {
         auto messageParser = std::make_shared<MessageParser>(Core, std::move(Message));
@@ -242,7 +253,9 @@ void Functions::func_spy_picture_by_id() {
         messageParser->parse_content();
     };
 
-    while (true) {
+    // register ctrl c capture handler
+    auto console_capturer_ptr = std::make_unique<ConsoleCtrlCapturer>();
+    while (!console_capturer_ptr->is_capture_ctrl_c()) {
         core_->update();
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
