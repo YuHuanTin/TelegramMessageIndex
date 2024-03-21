@@ -218,6 +218,39 @@ void Functions::func_spy_picture_by_id() {
     configServicePtr->refresh();
 
 
+    auto message_progress = [&vecSpyUserIds](TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {
+        auto messageParser = std::make_shared<MessageParser>(Core, std::move(Message));
+        messageParser->set_content_photo([&vecSpyUserIds](MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
+            // check if user is in spy list
+            auto isContain = std::any_of(vecSpyUserIds.begin(), vecSpyUserIds.end(), [&](const std::string &i) {
+                if (Parser->get_sender_id() == stoll(i)) {
+                    return true;
+                }
+                return false;
+            });
+            if (!isContain) {
+                return;
+            }
+
+
+            std::println("Receive photo message: [chat_id:{}, title:{}][from:{}] [sender_id:{}]",
+                         Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Parser->get_sender_id());
+            // rename with send person name
+            std::filesystem::path file_path(File->local_->path_);
+
+            std::string str = Parser->get_sender_name();
+            replace_illegal_characters(str);
+
+            try {
+                std::filesystem::rename(file_path, file_path.parent_path() /
+                                                   std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
+            } catch (std::exception &Exception) {
+                std::println("Rename file error: {}", Exception.what());
+            }
+        });
+        messageParser->parse_content();
+    };
+
     // register ctrl c capture handler
     auto console_capturer_ptr = std::make_unique<ConsoleCtrlCapturer>();
     while (!console_capturer_ptr->is_capture_ctrl_c()) {
@@ -226,37 +259,7 @@ void Functions::func_spy_picture_by_id() {
 
 
         while (!core_->get_messages().empty()) {
-            auto messageParser = std::make_shared<MessageParser>(core_, std::move(core_->get_messages().front()));
-            messageParser->set_content_photo([&vecSpyUserIds](MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
-
-                // check if user is in spy list
-                auto isContain = std::any_of(vecSpyUserIds.begin(), vecSpyUserIds.end(), [&](const std::string &i) {
-                    if (Parser->get_sender_id() == stoll(i)) {
-                        return true;
-                    }
-                    return false;
-                });
-                if (!isContain) {
-                    return;
-                }
-
-
-                std::println("Receive photo message: [chat_id:{}, title:{}][from:{}] [sender_id:{}]",
-                             Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Parser->get_sender_id());
-                // rename with send person name
-                std::filesystem::path file_path(File->local_->path_);
-
-                std::string str = Parser->get_sender_name();
-                replace_illegal_characters(str);
-
-                try {
-                    std::filesystem::rename(file_path, file_path.parent_path() /
-                                                       std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
-                } catch (std::exception &Exception) {
-                    std::println("Rename file error: {}", Exception.what());
-                }
-            });
-            messageParser->parse_content();
+            message_progress(core_, td::move_tl_object_as<td::td_api::message>(core_->get_messages().front()));
             core_->get_messages().pop();
         }
 
