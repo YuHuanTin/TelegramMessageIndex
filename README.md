@@ -1,6 +1,6 @@
 # TelegramMessageIndex
-telegram 消息索引工具
 
+telegram 消息索引工具
 
 首先输入手机号进行登录，登录成功后输入``c``获取chat列表，并紧接着输入``u``进行更新，挑选需要获取消息的群组
 

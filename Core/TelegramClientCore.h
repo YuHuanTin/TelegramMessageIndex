@@ -1,29 +1,35 @@
 //
-// Created by YuHuanTin on 2023/11/26.
+// Created by YuHuanTin on 2024/3/21.
 //
 
 #ifndef TELEGRAMMESSAGEINDEX_TELEGRAMCLIENTCORE_H
 #define TELEGRAMMESSAGEINDEX_TELEGRAMCLIENTCORE_H
 
-#include <map>
-#include <memory>
-#include <fstream>
-#include <functional>
-#include <string_view>
-
 
 #include <td/telegram/Client.h>
 #include <td/telegram/td_api.h>
 #include <td/telegram/td_api.hpp>
-#include "../Config/ProgramConfig.h"
-#include "../Functions.h"
 
 
-class Functions;
+#include "Config/ProgramConfig.h"
+#include "Register/FunctionRegister.h"
+
+#include <map>
+#include <queue>
+#include <print>
+#include <sstream>
+#include <iostream>
+#include <functional>
+#include <cassert>
+
+class FunctionRegister;
 
 class TelegramClientCore {
 private:
     using Object = td::td_api::object_ptr<td::td_api::Object>;
+    using Message = td::td_api::object_ptr<td::td_api::message>;
+    using Function = td::td_api::object_ptr<td::td_api::Function>;
+
 
     std::unique_ptr<td::ClientManager> client_manager_;
     std::int32_t                        client_id_{0};
@@ -42,13 +48,21 @@ private:
      * user defined
      */
 
-    std::shared_ptr<ProgramConfig> configServicePtr;
-    std::unique_ptr<Functions>          functionsPtr;
+    std::shared_ptr<ProgramConfig> configServicePtr_;
+
+    std::unique_ptr<FunctionRegister> registerdFunctions_;
+
+    std::pair<bool, int> logLevelOption_ = {false, 0};
+
+    std::queue<Message> messages_;
+
+private:
+    void inner_init();
+
 public:
+    TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_, std::unique_ptr<FunctionRegister> RegisterdFunc);
 
-    explicit TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_);
-
-    void set_proxy_s5(std::string_view Proxy_Host, int32_t Proxy_Port);
+    TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_, std::unique_ptr<FunctionRegister> RegisterdFunc, int LogLevel);
 
     void loop();
 
@@ -56,9 +70,15 @@ public:
 
     [[nodiscard]] std::string get_chat_title(std::int64_t chat_id) const;
 
-    void send_query(td::td_api::object_ptr<td::td_api::Function> f, std::function<void(Object)> handler);
+    void send_query(Function f, std::function<void(Object)> handler);
 
     void update();
+
+    /**
+     * user defined
+     */
+
+    std::queue<Message> &get_messages();
 
 private:
 

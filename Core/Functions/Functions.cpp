@@ -10,22 +10,10 @@
 #include <sstream>
 #include <filesystem>
 
-#include "Parser/MessageParser.h"
-#include "ConsoleCtrlCapturer.h"
+#include "../Parser/MessageParser.h"
+#include "../Utils/ConsoleCtrlCapturer.h"
 
-
-auto default_text_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::messageText> Text) {
-    std::println("Receive message: [chat_id:{}, title:{}][from:{}][{}]",
-                 Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Text->text_->text_);
-}
-
-auto default_photo_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
-    std::println("Receive photo message: [chat_id:{}, title:{}][from:{}]",
-                 Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name());
-    // rename with send person name
-    std::filesystem::path file_path(File->local_->path_);
-
-    std::string str = Parser->get_sender_name();
+auto replace_illegal_characters(std::string &str) {
     std::for_each(str.begin(), str.end(), [](char &c) {
         switch (c) {
             case '\\':
@@ -43,6 +31,22 @@ auto default_photo_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::
                 break;
         }
     });
+}
+
+auto default_text_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::messageText> Text) {
+    std::println("Receive message: [chat_id:{}, title:{}][from:{}][{}]",
+                 Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Text->text_->text_);
+}
+
+auto default_photo_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
+    std::println("Receive photo message: [chat_id:{}, title:{}][from:{}]",
+                 Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name());
+    // rename with send person name
+    std::filesystem::path file_path(File->local_->path_);
+
+    std::string str = Parser->get_sender_name();
+    replace_illegal_characters(str);
+
     try {
         std::filesystem::rename(file_path, file_path.parent_path() /
                                            std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
@@ -50,6 +54,9 @@ auto default_photo_parser(MessageParser *Parser, td::tl::unique_ptr<td::td_api::
         std::println("Rename file error: {}", Exception.what());
     }
 }
+
+Functions::Functions(TelegramClientCore *Core, std::shared_ptr<ProgramConfig> ConfigService)
+        : core_(Core), configServicePtr(std::move(ConfigService)) {}
 
 void Functions::func_history() {
     /// get chat id
@@ -160,11 +167,6 @@ void Functions::func_history() {
 }
 
 void Functions::func_parse_update_message(td::tl::unique_ptr<td::td_api::message> Message) {
-    if (this->message_parser_ != nullptr) {
-        this->message_parser_(core_, std::move(Message));
-        return;
-    }
-
     // default message parser
     auto messageParser = std::make_shared<MessageParser>(core_, std::move(Message));
     messageParser->set_content_text(default_text_parser);
@@ -199,8 +201,8 @@ void reinput_user_ids(std::vector<std::string> &vecSpyUserIds) {
 }
 
 void Functions::func_spy_picture_by_id() {
-    auto vecSpyUserIds = configServicePtr->read_lists(ProgramConfig::spy_picture_by_id_list);
-
+    // require spy user ids
+    auto vecSpyUserIds = configServicePtr->read_lists(REGISTER::CONFIG_STRING_NAME::spy_picture_by_id_list);
     if (!vecSpyUserIds.empty()) {
         print_spy_user_ids(vecSpyUserIds);
 
@@ -211,57 +213,53 @@ void Functions::func_spy_picture_by_id() {
         reinput_user_ids(vecSpyUserIds);
     }
 
-    configServicePtr->write_lists(ProgramConfig::spy_picture_by_id_list, vecSpyUserIds);
+    // save config for spy user ids
+    configServicePtr->write_lists(REGISTER::CONFIG_STRING_NAME::spy_picture_by_id_list, vecSpyUserIds);
     configServicePtr->refresh();
 
-
-    /// loop
-    auto old_message_parser = this->message_parser_;
-    this->message_parser_ = [](TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {
-        auto messageParser = std::make_shared<MessageParser>(Core, std::move(Message));
-        messageParser->set_content_photo([](MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
-            std::println("Receive photo message: [chat_id:{}, title:{}][from:{}] [sender_id:{}]",
-                         Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Parser->get_sender_id());
-            // rename with send person name
-            std::filesystem::path file_path(File->local_->path_);
-
-            std::string str = Parser->get_sender_name();
-            std::for_each(str.begin(), str.end(), [](char &c) {
-                switch (c) {
-                    case '\\':
-                    case '/':
-                    case ':':
-                    case '*':
-                    case '?':
-                    case '"':
-                    case '<':
-                    case '>':
-                    case '|':
-                        c = '_';
-                        break;
-                    default:
-                        break;
-                }
-            });
-            try {
-                std::filesystem::rename(file_path, file_path.parent_path() /
-                                                   std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
-            } catch (std::exception &Exception) {
-                std::println("Rename file error: {}", Exception.what());
-            }
-        });
-        messageParser->parse_content();
-    };
 
     // register ctrl c capture handler
     auto console_capturer_ptr = std::make_unique<ConsoleCtrlCapturer>();
     while (!console_capturer_ptr->is_capture_ctrl_c()) {
+        // update get some messages
         core_->update();
+
+
+        while (!core_->get_messages().empty()) {
+            auto messageParser = std::make_shared<MessageParser>(core_, std::move(core_->get_messages().front()));
+            messageParser->set_content_photo([&vecSpyUserIds](MessageParser *Parser, td::tl::unique_ptr<td::td_api::file> File) {
+
+                // check if user is in spy list
+                auto isContain = std::any_of(vecSpyUserIds.begin(), vecSpyUserIds.end(), [&](const std::string &i) {
+                    if (Parser->get_sender_id() == stoll(i)) {
+                        return true;
+                    }
+                    return false;
+                });
+                if (!isContain) {
+                    return;
+                }
+
+
+                std::println("Receive photo message: [chat_id:{}, title:{}][from:{}] [sender_id:{}]",
+                             Parser->get_chat_id(), Parser->get_chat_title(), Parser->get_sender_name(), Parser->get_sender_id());
+                // rename with send person name
+                std::filesystem::path file_path(File->local_->path_);
+
+                std::string str = Parser->get_sender_name();
+                replace_illegal_characters(str);
+
+                try {
+                    std::filesystem::rename(file_path, file_path.parent_path() /
+                                                       std::format("{}_{}{}", str, File->id_, file_path.extension().string()));
+                } catch (std::exception &Exception) {
+                    std::println("Rename file error: {}", Exception.what());
+                }
+            });
+            messageParser->parse_content();
+            core_->get_messages().pop();
+        }
+
         std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
-
-    this->message_parser_ = old_message_parser;
 }
-
-Functions::Functions(TelegramClientCore *Core, std::shared_ptr<ProgramConfig> ProgramConfig_)
-        : core_(Core), configServicePtr(std::move(ProgramConfig_)) {}

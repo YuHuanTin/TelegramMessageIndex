@@ -2,7 +2,7 @@
 // Created by YuHuanTin on 2024/3/19.
 //
 
-#include "../Config/ProgramConfig.h"
+#include "../Core/Config/ProgramConfig.h"
 #include <catch.hpp>
 #include <print>
 

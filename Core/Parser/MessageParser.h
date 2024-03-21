@@ -7,7 +7,7 @@
 
 #include "td/telegram/td_api.h"
 #include "td/telegram/td_api.hpp"
-#include "../Core/TelegramClientCore.h"
+#include "../TelegramClientCore.h"
 
 
 class MessageParser : public std::enable_shared_from_this<MessageParser> {

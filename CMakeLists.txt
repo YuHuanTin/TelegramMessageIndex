@@ -64,16 +64,22 @@ add_compile_options("/utf-8")
 
 
 set(COMPILE_FILES
-        Functions.cpp
-        Functions.h
+        Core/Functions/Functions.cpp
+        Core/Functions/Functions.h
+        Core/Parser/MessageParser.cpp
+        Core/Parser/MessageParser.h
+        Core/Config/ProgramConfig.cpp
+        Core/Config/ProgramConfig.h
+        Core/Utils/ConsoleCtrlCapturer.cpp
+        Core/Utils/ConsoleCtrlCapturer.h
         Core/TelegramClientCore.cpp
         Core/TelegramClientCore.h
-        Parser/MessageParser.cpp
-        Parser/MessageParser.h
-        Config/ProgramConfig.cpp
-        Config/ProgramConfig.h
-        ConsoleCtrlCapturer.cpp
-        ConsoleCtrlCapturer.h
+        Core/Register/FunctionRegister.cpp
+        Core/Register/FunctionRegister.h
+        Core/Register/StringRegister.cpp
+        Core/Register/StringRegister.h
+        Core/CoreWarpper.h
+        Core/CoreWarpper.cpp
 )
 
 add_executable(TelegramMessageIndex

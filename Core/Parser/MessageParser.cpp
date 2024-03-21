@@ -56,7 +56,7 @@ void MessageParser::parse_content() {
                                       std::println("Error: object is nullptr");
                                       return;
                                   }
-                                  
+
                                   shared_this->parse_photo_(shared_this.get(), td::move_tl_object_as<td::td_api::file>(object));
                               });
             break;
