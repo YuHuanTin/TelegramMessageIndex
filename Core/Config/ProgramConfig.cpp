@@ -29,8 +29,8 @@ ProgramConfig::ProgramConfig() {
     }
 
     // read config
-    std::string                                      line;
-    std::vector<std::pair<std::string, std::string>> vecConfigKV;
+    std::string                                       line;
+    std::vector<std::pair<std::string, std::string> > vecConfigKV;
     while (std::getline(this->file_, line)) {
         auto pos = line.find(':');
         if (pos != std::string::npos) {
@@ -53,7 +53,7 @@ std::string ProgramConfig::read(REGISTER::CONFIG_STRING_NAME Key) {
 }
 
 std::vector<std::string> ProgramConfig::read_lists(REGISTER::CONFIG_STRING_NAME Key) {
-    auto                     v = read(Key);
+    auto v = read(Key);
     // split by ';' from single line
     std::stringstream        ss(v);
     std::string              item;

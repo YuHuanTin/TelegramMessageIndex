@@ -9,22 +9,22 @@
 void TelegramClientCore::inner_init() {
     // 创建客户端
     client_manager_ = std::make_unique<td::ClientManager>();
-    client_id_ = client_manager_->create_client_id();
+    client_id_      = client_manager_->create_client_id();
 
     // 发送查询
     send_query(td::td_api::make_object<td::td_api::getOption>("version"), {});
 }
 
 TelegramClientCore::TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_, std::unique_ptr<FunctionRegister> RegisterdFunc)
-        : configServicePtr_(std::move(ProgramConfig_)),
-          registerdFunctions_(std::move(RegisterdFunc)) {
+    : configServicePtr_(std::move(ProgramConfig_)),
+      registerdFunctions_(std::move(RegisterdFunc)) {
     this->inner_init();
 }
 
 TelegramClientCore::TelegramClientCore(std::shared_ptr<ProgramConfig> ProgramConfig_, std::unique_ptr<FunctionRegister> RegisterdFunc, int LogLevel)
-        : configServicePtr_(std::move(ProgramConfig_)),
-          registerdFunctions_(std::move(RegisterdFunc)),
-          logLevelOption_(true, LogLevel) {
+    : configServicePtr_(std::move(ProgramConfig_)),
+      registerdFunctions_(std::move(RegisterdFunc)),
+      logLevelOption_(true, LogLevel) {
     assert(LogLevel >= 0 && LogLevel <= 1024 && "log level must be between 0 and 1024");
 
     // 设置日志等级
@@ -45,7 +45,7 @@ void TelegramClientCore::loop() {
             std::string line;
             std::getline(std::cin, line);
             std::istringstream ss(line);
-            std::string action;
+            std::string        action;
             if (!(ss >> action)) {
                 continue;
             }
@@ -53,7 +53,8 @@ void TelegramClientCore::loop() {
             if (action == "q") {
                 return;
             }
-            if (auto it = this->registerdFunctions_->mapFuncStr_.find(action); it != this->registerdFunctions_->mapFuncStr_.end()) {
+            if (auto it = this->registerdFunctions_->mapFuncStr_.find(action);
+                it != this->registerdFunctions_->mapFuncStr_.end()) {
                 this->registerdFunctions_->mapFunc_[it->second](this);
             } else {
                 std::println("unknown action: {}", action);
@@ -62,7 +63,7 @@ void TelegramClientCore::loop() {
     }
 }
 
-std::queue<td::td_api::object_ptr<td::td_api::message>> &TelegramClientCore::get_messages() {
+std::queue<td::td_api::object_ptr<td::td_api::message> > &TelegramClientCore::get_messages() {
     return messages_;
 }
 
@@ -129,17 +130,17 @@ void TelegramClientCore::process_update(td::td_api::object_ptr<td::td_api::Objec
     switch (update->get_id()) {
         case td::td_api::updateAuthorizationState::ID: {
             auto update_authorization_state = td::td_api::move_object_as<td::td_api::updateAuthorizationState>(update);
-            authorization_state_ = std::move(update_authorization_state->authorization_state_);
+            authorization_state_            = std::move(update_authorization_state->authorization_state_);
             on_authorization_state_update();
             break;
         }
         case td::td_api::updateNewChat::ID: {
-            auto update_new_chat = td::td_api::move_object_as<td::td_api::updateNewChat>(update);
+            auto update_new_chat                     = td::td_api::move_object_as<td::td_api::updateNewChat>(update);
             chat_title_[update_new_chat->chat_->id_] = update_new_chat->chat_->title_;
             break;
         }
         case td::td_api::updateChatTitle::ID: {
-            auto update_chat_title = td::td_api::move_object_as<td::td_api::updateChatTitle>(update);
+            auto update_chat_title                   = td::td_api::move_object_as<td::td_api::updateChatTitle>(update);
             chat_title_[update_chat_title->chat_id_] = update_chat_title->title_;
             break;
         }
@@ -203,7 +204,7 @@ void TelegramClientCore::on_authorization_state_update() {
             auto last_login_phone_number = this->configServicePtr_->read(REGISTER::CONFIG_STRING_NAME::last_login_phone_number);
             if (!last_login_phone_number.empty() && require_use_last_login_phone_number(last_login_phone_number)) {
                 send_query(td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(last_login_phone_number, nullptr),
-                           create_authentication_query_handler());
+                    create_authentication_query_handler());
                 break;
             }
             std::println("Enter phone number: ");
@@ -214,7 +215,7 @@ void TelegramClientCore::on_authorization_state_update() {
             this->configServicePtr_->refresh();
 
             send_query(td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(phone_number, nullptr),
-                       create_authentication_query_handler());
+                create_authentication_query_handler());
             break;
         }
         case td::td_api::authorizationStateWaitEmailAddress::ID: {
@@ -222,8 +223,8 @@ void TelegramClientCore::on_authorization_state_update() {
             std::string email_address;
             std::cin >> email_address;
             send_query(
-                    td::td_api::make_object<td::td_api::setAuthenticationEmailAddress>(email_address),
-                    create_authentication_query_handler());
+                td::td_api::make_object<td::td_api::setAuthenticationEmailAddress>(email_address),
+                create_authentication_query_handler());
             break;
         }
         case td::td_api::authorizationStateWaitEmailCode::ID: {
@@ -231,8 +232,8 @@ void TelegramClientCore::on_authorization_state_update() {
             std::string code;
             std::cin >> code;
             send_query(td::td_api::make_object<td::td_api::checkAuthenticationEmailCode>(
-                               td::td_api::make_object<td::td_api::emailAddressAuthenticationCode>(code)),
-                       create_authentication_query_handler());
+                    td::td_api::make_object<td::td_api::emailAddressAuthenticationCode>(code)),
+                create_authentication_query_handler());
             break;
         }
         case td::td_api::authorizationStateWaitCode::ID: {
@@ -265,15 +266,15 @@ void TelegramClientCore::on_authorization_state_update() {
             break;
         }
         case td::td_api::authorizationStateWaitTdlibParameters::ID: {
-            auto request = td::td_api::make_object<td::td_api::setTdlibParameters>();
-            request->database_directory_   = "tdlib";
-            request->use_message_database_ = true;
-            request->use_secret_chats_     = true;
-            request->api_id_               = 14370505;
-            request->api_hash_             = "7cbc707a62ce714074b6853d72b92da5";
-            request->system_language_code_ = "en";
-            request->device_model_         = "Desktop";
-            request->application_version_  = "1.0";
+            auto request                       = td::td_api::make_object<td::td_api::setTdlibParameters>();
+            request->database_directory_       = "tdlib";
+            request->use_message_database_     = true;
+            request->use_secret_chats_         = true;
+            request->api_id_                   = 14370505;
+            request->api_hash_                 = "7cbc707a62ce714074b6853d72b92da5";
+            request->system_language_code_     = "en";
+            request->device_model_             = "Desktop";
+            request->application_version_      = "1.0";
             request->enable_storage_optimizer_ = true;
             send_query(std::move(request), create_authentication_query_handler());
             break;
