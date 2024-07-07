@@ -4,15 +4,12 @@
 
 #include "ConsoleCtrlCapturer.h"
 
-#include "windows.h"
 #include <print>
 
-bool ConsoleCtrlCapturer::capture_ctrl_c = false;
-
-BOOL ConsoleCtrlCapturer::control_handler(DWORD ctrl_type) {
+BOOL ConsoleCtrlCapturer::ControlHandler(const DWORD ctrl_type) {
     switch (ctrl_type) {
         case CTRL_C_EVENT:
-            ConsoleCtrlCapturer::capture_ctrl_c = true;
+            ConsoleCtrlCapturer::is_capture_ctrl_c_ = true;
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
         case CTRL_LOGOFF_EVENT:
@@ -24,17 +21,17 @@ BOOL ConsoleCtrlCapturer::control_handler(DWORD ctrl_type) {
 }
 
 ConsoleCtrlCapturer::ConsoleCtrlCapturer() {
-    ConsoleCtrlCapturer::capture_ctrl_c = false;
-
-    if (!SetConsoleCtrlHandler(ConsoleCtrlCapturer::control_handler, TRUE)) {
+    if (!SetConsoleCtrlHandler(ConsoleCtrlCapturer::ControlHandler, TRUE)) {
         std::println("SetConsoleCtrlHandler failed: {}", GetLastError());
     }
 }
 
+bool ConsoleCtrlCapturer::IsCaptureCtrlC() { return is_capture_ctrl_c_; }
+
 ConsoleCtrlCapturer::~ConsoleCtrlCapturer() {
-    if (!SetConsoleCtrlHandler(ConsoleCtrlCapturer::control_handler, FALSE)) {
+    if (!SetConsoleCtrlHandler(ConsoleCtrlCapturer::ControlHandler, FALSE)) {
         std::println("SetConsoleCtrlHandler failed: {}", GetLastError());
     }
 
-    ConsoleCtrlCapturer::capture_ctrl_c = false;
+    ConsoleCtrlCapturer::is_capture_ctrl_c_ = false;
 }

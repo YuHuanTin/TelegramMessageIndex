@@ -14,7 +14,7 @@
 #include "../Utils/ConsoleCtrlCapturer.h"
 
 auto replace_illegal_characters(std::string &str) {
-    std::for_each(str.begin(), str.end(), [](char &c) {
+    std::ranges::for_each(str, [](char &c) {
         switch (c) {
             case '\\':
             case '/':
@@ -253,7 +253,7 @@ void Functions::func_spy_picture_by_id() {
 
     // register ctrl c capture handler
     auto console_capturer_ptr = std::make_unique<ConsoleCtrlCapturer>();
-    while (!console_capturer_ptr->is_capture_ctrl_c()) {
+    while (!console_capturer_ptr->IsCaptureCtrlC()) {
         // update get some messages
         core_->update();
 

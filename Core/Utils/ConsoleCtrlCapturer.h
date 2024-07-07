@@ -8,14 +8,14 @@
 #include "windows.h"
 
 class ConsoleCtrlCapturer {
-    static bool capture_ctrl_c;
+    inline static bool is_capture_ctrl_c_ { false };
 
-    static BOOL WINAPI control_handler(DWORD ctrl_type);
+    static BOOL WINAPI ControlHandler(DWORD ctrl_type);
 
 public:
     ConsoleCtrlCapturer();
 
-    bool is_capture_ctrl_c() { return capture_ctrl_c; }
+    static bool IsCaptureCtrlC();
 
     ~ConsoleCtrlCapturer();
 };

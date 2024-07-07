@@ -6,13 +6,13 @@
 #define TELEGRAMMESSAGEINDEX_FUNCTIONREGISTER_H
 
 
-#include <map>
+#include <unordered_map>
 #include <functional>
 #include <string>
 #include "../TelegramClientCore.h"
 
 namespace REGISTER {
-    enum FUNCTION_NAME {
+    enum class FUNCTION_NAME {
         FUNCTION_UPDATE,
         FUNCTION_CLOSE,
         FUNCTION_ME,
@@ -28,8 +28,8 @@ namespace REGISTER {
 class TelegramClientCore;
 
 struct FunctionRegister {
-    std::map<std::string, REGISTER::FUNCTION_NAME>                               mapFuncStr_;
-    std::map<REGISTER::FUNCTION_NAME, std::function<void(TelegramClientCore *)>> mapFunc_;
+    std::unordered_map<std::string, REGISTER::FUNCTION_NAME>                                mapFuncStr_;
+    std::unordered_map<REGISTER::FUNCTION_NAME, std::function<void(TelegramClientCore *)> > mapFunc_;
 
     FunctionRegister();
 

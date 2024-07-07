@@ -22,7 +22,7 @@
 #include <functional>
 #include <cassert>
 
-class FunctionRegister;
+struct FunctionRegister;
 
 class TelegramClientCore {
 private:

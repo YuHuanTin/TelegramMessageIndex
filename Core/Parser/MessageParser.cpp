@@ -51,7 +51,7 @@ void MessageParser::parse_content() {
                         std::println("Error: {}", to_string(td::move_tl_object_as<td::td_api::error>(object)));
                         return;
                     }
-                    if (object == nullptr) {
+                    if (object == nullptr || td::move_tl_object_as<td::td_api::Object>(object) == nullptr) {
                         std::println("Error: object is nullptr");
                         return;
                     }

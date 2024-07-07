@@ -53,8 +53,9 @@ link_libraries(${TDLib_Lib_Files})
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(Catch2 CONFIG REQUIRED)
+find_package(concurrencpp CONFIG REQUIRED)
 
-
+link_libraries(concurrencpp::concurrencpp)
 link_libraries(Catch2::Catch2 Catch2::Catch2WithMain)
 link_libraries(ZLIB::ZLIB)
 link_libraries(OpenSSL::Crypto OpenSSL::SSL)
