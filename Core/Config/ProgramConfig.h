@@ -6,23 +6,17 @@
 #define TELEGRAMMESSAGEINDEX_PROGRAMCONFIG_H
 
 
-#include "../Register/StringRegister.h"
-
-#include <fstream>
+#include <map>
 #include <string>
 #include <vector>
-#include <map>
+
+#include "../Register/StringRegister.h"
 
 class ProgramConfig {
-private:
-    std::fstream file_;
-
-    StringRegister                     mapRegisterdName_;
-    std::map<std::string, std::string> mapConfigValue_;
+    std::string                             file_name_ { REGISTER::STRING_POOL::normal_config_file_name };
+    std::map<std::string_view, std::string> mapConfigValue_;
 
 public:
-
-
     ProgramConfig();
 
     /**
@@ -30,14 +24,14 @@ public:
      * @param Key 
      * @return 
      */
-    std::string read(REGISTER::CONFIG_STRING_NAME Key);
+    std::string Read(std::string_view Key);
 
     /**
      * 从内存 map 中读取列表配置
      * @param Key 
      * @return 
      */
-    std::vector<std::string> read_lists(REGISTER::CONFIG_STRING_NAME Key);
+    std::vector<std::string> Read_lists(std::string_view Key);
 
     /**
      * 将配置写入内存 map
@@ -45,7 +39,7 @@ public:
      * @param Value 
      * @return 
      */
-    bool write(REGISTER::CONFIG_STRING_NAME Key, const std::string &Value);
+    bool Write(std::string_view Key, const std::string &Value);
 
     /**
      * 将列表配置写入内存 map
@@ -53,13 +47,13 @@ public:
      * @param Value 
      * @return 
      */
-    bool write_lists(REGISTER::CONFIG_STRING_NAME Key, const std::vector<std::string> &Value);
+    bool Write_lists(std::string_view Key, const std::vector<std::string> &Value);
 
     /**
      * 真正写入配置到文件中去
      * @return 
      */
-    bool refresh();
+    void Refresh();
 
     ~ProgramConfig();
 };

@@ -201,7 +201,7 @@ void TelegramClientCore::on_authorization_state_update() {
                 return use_last_login_phone_number == 'y' || use_last_login_phone_number == 'Y';
             };
 
-            auto last_login_phone_number = this->configServicePtr_->read(REGISTER::CONFIG_STRING_NAME::last_login_phone_number);
+            auto last_login_phone_number = this->configServicePtr_->Read(REGISTER::STRING_POOL::config_last_login_phone_number);
             if (!last_login_phone_number.empty() && require_use_last_login_phone_number(last_login_phone_number)) {
                 send_query(td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(last_login_phone_number, nullptr),
                     create_authentication_query_handler());
@@ -211,8 +211,8 @@ void TelegramClientCore::on_authorization_state_update() {
             std::string phone_number;
             std::cin >> phone_number;
 
-            this->configServicePtr_->write(REGISTER::CONFIG_STRING_NAME::last_login_phone_number, phone_number);
-            this->configServicePtr_->refresh();
+            this->configServicePtr_->Write(REGISTER::STRING_POOL::config_last_login_phone_number, phone_number);
+            this->configServicePtr_->Refresh();
 
             send_query(td::td_api::make_object<td::td_api::setAuthenticationPhoneNumber>(phone_number, nullptr),
                 create_authentication_query_handler());

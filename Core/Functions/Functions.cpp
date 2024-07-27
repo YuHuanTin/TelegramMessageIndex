@@ -202,7 +202,7 @@ void reinput_user_ids(std::vector<std::string> &vecSpyUserIds) {
 
 void Functions::func_spy_picture_by_id() {
     // require spy user ids
-    auto vecSpyUserIds = configServicePtr->read_lists(REGISTER::CONFIG_STRING_NAME::spy_picture_by_id_list);
+    auto vecSpyUserIds = configServicePtr->Read_lists(REGISTER::STRING_POOL::config_spy_picture_by_id_list);
     if (!vecSpyUserIds.empty()) {
         print_spy_user_ids(vecSpyUserIds);
 
@@ -214,8 +214,8 @@ void Functions::func_spy_picture_by_id() {
     }
 
     // save config for spy user ids
-    configServicePtr->write_lists(REGISTER::CONFIG_STRING_NAME::spy_picture_by_id_list, vecSpyUserIds);
-    configServicePtr->refresh();
+    configServicePtr->Write_lists(REGISTER::STRING_POOL::config_spy_picture_by_id_list, vecSpyUserIds);
+    configServicePtr->Refresh();
 
 
     auto message_progress = [&vecSpyUserIds](TelegramClientCore *Core, td::tl::unique_ptr<td::td_api::message> Message) {

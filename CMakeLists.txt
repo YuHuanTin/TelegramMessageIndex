@@ -4,6 +4,7 @@ project(TelegramMessageIndex)
 set(CMAKE_CXX_STANDARD 23)
 
 
+# scan all TDLib types directories 
 set(TDLib_TYPES
         "Debug"
         "Release"
@@ -45,25 +46,23 @@ message(STATUS "TDLib_Include_Path: ${TDLib_Include_Path}")
 message(STATUS "TDLib_Bin_Files: ${TDLib_Bin_Files}")
 message(STATUS "TDLib_Lib_Files: ${TDLib_Lib_Files}")
 
-
 include_directories(${TDLib_Include_Path})
-
 link_libraries(${TDLib_Lib_Files})
 
+
+# import 3-rd party library
 find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
-find_package(Catch2 CONFIG REQUIRED)
 find_package(concurrencpp CONFIG REQUIRED)
 
 link_libraries(concurrencpp::concurrencpp)
-link_libraries(Catch2::Catch2 Catch2::Catch2WithMain)
 link_libraries(ZLIB::ZLIB)
 link_libraries(OpenSSL::Crypto OpenSSL::SSL)
 link_libraries(ws2_32 CRYPT32 Normaliz Psapi)
 
+
+# set utf-8
 add_compile_options("/utf-8")
-
-
 set(COMPILE_FILES
         Core/Functions/Functions.cpp
         Core/Functions/Functions.h
@@ -77,7 +76,6 @@ set(COMPILE_FILES
         Core/TelegramClientCore.h
         Core/Register/FunctionRegister.cpp
         Core/Register/FunctionRegister.h
-        Core/Register/StringRegister.cpp
         Core/Register/StringRegister.h
         Core/CoreWarpper.h
         Core/CoreWarpper.cpp
@@ -89,7 +87,5 @@ add_executable(TelegramMessageIndex
 )
 
 
-add_executable(Catch_Test
-        Catch2_Test/ProgramConfigTest.cpp
-        ${COMPILE_FILES}
-)
+# add test subdirectory
+add_subdirectory(Catch2_Test)
