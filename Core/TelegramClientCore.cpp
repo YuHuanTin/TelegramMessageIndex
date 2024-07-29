@@ -250,7 +250,7 @@ void TelegramClientCore::on_authorization_state_update() {
             std::cin >> first_name;
             std::println("Enter your last name: ");
             std::cin >> last_name;
-            send_query(td::td_api::make_object<td::td_api::registerUser>(first_name, last_name), create_authentication_query_handler());
+            send_query(td::td_api::make_object<td::td_api::registerUser>(first_name, last_name, true), create_authentication_query_handler());
             break;
         }
         case td::td_api::authorizationStateWaitPassword::ID: {
@@ -275,7 +275,6 @@ void TelegramClientCore::on_authorization_state_update() {
             request->system_language_code_     = "en";
             request->device_model_             = "Desktop";
             request->application_version_      = "1.0";
-            request->enable_storage_optimizer_ = true;
             send_query(std::move(request), create_authentication_query_handler());
             break;
         }
