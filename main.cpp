@@ -1,58 +1,34 @@
-#include <cstdio>
 #include <print>
-#include <iostream>
 
-#include "Core/CoreWarpper.h"
+#include <concurrencpp/concurrencpp.h>
+#include "Core/ObjectManager.h"
 
-
-std::tuple<std::string, int32_t> get_s5_proxy_from_input() {
-    std::string s5_proxy_ip, s5_proxy_port;
-
-    // query for socks5 proxy
-    std::println("please input your socks5 proxy ip if exist (e.g. 127.0.0.1):");
-    std::getline(std::cin, s5_proxy_ip);
-    if (s5_proxy_ip.empty())
-        return {};
-
-    std::println("please input your socks5 proxy port (e.g. 11223):");
-    std::getline(std::cin, s5_proxy_port);
-    if (s5_proxy_port.empty())
-        return {};
-
-    if (!s5_proxy_ip.empty() && !s5_proxy_port.empty()) {
-        return { s5_proxy_ip, std::stol(s5_proxy_port) };
+concurrencpp::result<void> DoLoop(TdClientCoreCo &TdClient) {
+    ObjectManager object_manager { TdClient };
+    while (true) {
+        auto v = co_await TdClient.LoopIt(20);
+        if (!v) {
+            continue;
+        }
+        object_manager.ProcessObject(std::move(v));
     }
-    return {};
+    co_return;
 }
 
 int main() {
+    system("cls");
     // disable output buffering
     setvbuf(stdout, nullptr, _IONBF, 0);
 
     // setting global encoding utf-8
-    std::locale::global(std::locale(REGISTER::STRING_POOL::normal_locale.data()));
+    std::locale::global(std::locale("zh_CN.UTF-8"));
 
-    auto configService = std::make_shared<ProgramConfig>();
-    auto proxyHost     = configService->Read(REGISTER::STRING_POOL::config_proxy_host);
-    auto proxyPort     = configService->Read(REGISTER::STRING_POOL::config_proxy_port);
+    auto           startTimePoint = std::chrono::system_clock::now();
+    TdClientCoreCo example;
 
-    if (!proxyHost.empty() && !proxyPort.empty()) {
-        std::println("load config proxy host: {}\n"
-            "load config proxy port: {}", proxyHost, proxyPort);
-    } else {
-        const auto [s5_proxy, s5_proxy_port] = get_s5_proxy_from_input();
-        if (!s5_proxy.empty()) {
-            configService->Write(REGISTER::STRING_POOL::config_proxy_host, s5_proxy);
-            configService->Write(REGISTER::STRING_POOL::config_proxy_port, std::to_string(s5_proxy_port));
-            configService->Refresh();
-            proxyHost = s5_proxy;
-            proxyPort = std::to_string(s5_proxy_port);
-        }
-    }
+    example.SendQuery(Utils::Make<td::td_api::addProxy>("127.0.0.1", 7890, true, Utils::Make<td::td_api::proxyTypeSocks5>()));
+    example.Auth();
+    std::println("elapsed time: {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTimePoint).count());
 
-    CoreWarpper example(configService, 0);
-    if (!proxyHost.empty() && !proxyPort.empty()) {
-        example.set_socks5_proxy(proxyHost, stol(proxyPort));
-    }
-    example.loop();
+    DoLoop(example).get();
 }
