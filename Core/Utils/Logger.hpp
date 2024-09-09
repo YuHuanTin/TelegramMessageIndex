@@ -17,8 +17,9 @@ namespace LogFormat {
         Error   = 3
     };
 
-    inline std::array<std::string_view, 4> LogTypeString = { "debug", "Info", "Warning", "Error" };
-    inline std::array<std::string_view, 5> LogColor      = {
+    inline LogLevel                           MinOutputLevel = Debug;
+    constexpr std::array<std::string_view, 4> LogTypeString  = { "debug", "Info", "Warning", "Error" };
+    constexpr std::array<std::string_view, 5> LogColor       = {
         "\033[1;45m", // Debug: highlight purple
         "\033[1;37m", // Info: highlight white
         "\033[1;33m", // Warning: yellow
@@ -27,21 +28,25 @@ namespace LogFormat {
     };
 
     template<typename T>
-    constexpr std::chrono::local_time<T> getZoneTime() {
+    constexpr std::chrono::local_time<T> GetZoneTime() {
         const auto zoned_time_ = std::chrono::zoned_time(std::chrono::current_zone(), std::chrono::system_clock::now());
         return zoned_time_.get_local_time();
     }
 
+    /**
+     * 永远不要在 static 的构造函数中使用，否则初始化可能不及预期 
+     */
     template<LogLevel Level, typename... Types>
     void LogFormatter(const std::format_string<Types...> Format, Types &&... Args) {
-#ifdef _DEBUG
+        if (Level < MinOutputLevel) {
+            return;
+        }
         std::println("{}[{:%Y-%m-%d %H:%M:%S}] [{}] {}{}",
-            LogFormat::LogColor.at(Level),
-            getZoneTime<std::chrono::system_clock::duration>(),
-            LogFormat::LogTypeString[Level],
+            LogColor.at(Level),
+            GetZoneTime<std::chrono::system_clock::duration>(),
+            LogTypeString.at(Level),
             std::format(Format, std::forward<Types>(Args)...),
-            LogFormat::LogColor.at(4));
-#endif
+            LogColor.at(LogColor.size() - 1));
     }
 }
 

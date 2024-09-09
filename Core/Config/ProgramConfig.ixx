@@ -1,19 +1,64 @@
 //
-// Created by YuHuanTin on 2024/3/19.
+// Created by AFETT on 2024/7/30.
 //
 
-#include "ProgramConfig.h"
+export module Core.Config.ProgramConfig;
 
-#include <filesystem>
-#include <fstream>
-#include <print>
-#include <ranges>
-#include <string>
-#include <vector>
+import std;
 
-#include "../Register/StringRegister.h"
+import Core.Register.StringRegister;
+import Core.Utils.Logger;
+
+
+export class ProgramConfig {
+    std::string                             file_name_ { REGISTER::STRING_POOL::normal_config_file_name };
+    std::map<std::string_view, std::string> mapConfigValue_;
+
+public:
+    ProgramConfig();
+
+    /**
+     * 从内存 map 中读取配置
+     * @param Key 
+     * @return 
+     */
+    std::string Read(std::string_view Key);
+
+    /**
+     * 从内存 map 中读取列表配置
+     * @param Key 
+     * @return 
+     */
+    std::vector<std::string> Read_lists(std::string_view Key);
+
+    /**
+     * 将配置写入内存 map
+     * @param Key 
+     * @param Value 
+     * @return 
+     */
+    bool Write(std::string_view Key, const std::string &Value);
+
+    /**
+     * 将列表配置写入内存 map
+     * @param Key 
+     * @param Value 
+     * @return 
+     */
+    bool Write_lists(std::string_view Key, const std::vector<std::string> &Value);
+
+    /**
+     * 真正写入配置到文件中去
+     * @return 
+     */
+    void Refresh();
+
+    ~ProgramConfig();
+};
+
 
 ProgramConfig::ProgramConfig() {
+    LogFormat::LogFormatter<LogFormat::Debug>("program config initializing...");
     auto create_config_if_not_exist = [this] {
         const auto config_path = std::filesystem::current_path() / this->file_name_;
         if (exists(config_path)) {
@@ -95,4 +140,6 @@ void ProgramConfig::Refresh() {
 
 ProgramConfig::~ProgramConfig() {
     Refresh();
+    LogFormat::LogFormatter<LogFormat::Debug>("program config dtor");
 }
+

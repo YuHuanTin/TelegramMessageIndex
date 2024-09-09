@@ -18,6 +18,7 @@ TdClientCoreCo::TdClientCoreCo() {
     SendQuery(Utils::Make<td::td_api::getOption>("version"));
 }
 
+// todo 改进它
 void TdClientCoreCo::Auth() {
     while (need_restart_ || !are_authorized_) {
         if (need_restart_) {
@@ -30,9 +31,8 @@ void TdClientCoreCo::Auth() {
 
 concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::SendQuery(Ptr_Function f) {
     auto query_id = next_query_id();
-#ifdef _DEBUG_LOG
     LogFormat::LogFormatter<LogFormat::Debug>("->{}, {}", query_id, td::td_api::to_string(f));
-#endif
+
     client_manager_->send(client_id_, query_id, std::move(f));
 
     // submit promise 
@@ -46,13 +46,9 @@ concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::SendQuery(Ptr_F
 concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::LoopIt(const double TimeOutSeconds) {
     auto &&[client_id, request_id, object] = this->client_manager_->receive(TimeOutSeconds);
     if (!object) {
-        LogFormat::LogFormatter<LogFormat::Debug>("may be timeout, client_id: {}, request_id: {}", client_id, request_id);
         co_return nullptr; // maybe timeout
     }
-#ifdef _DEBUG_LOG
     LogFormat::LogFormatter<LogFormat::Debug>("<-{}, {}", request_id, td::td_api::to_string(object));
-#endif
-
     if (const auto it = co_handlers_.find(request_id);
         it != co_handlers_.end()) {
         it->second.set_result(std::move(object));
@@ -61,7 +57,7 @@ concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::LoopIt(const do
     }
 
     assert(request_id == 0 && "unexpected request_id");
-    // 特殊处理
+    // 特殊处理 todo 尝试消灭它！
     if (request_id == 0 && object->get_id() == td::td_api::updateAuthorizationState::ID) {
         authorization_state_ = std::move(Utils::MoveAs<td::td_api::updateAuthorizationState>(object)->authorization_state_);
         on_authorization_state_update();
@@ -89,40 +85,40 @@ void TdClientCoreCo::on_authorization_state_update() {
         Utils::overloaded(
             [this](td::td_api::authorizationStateReady &) {
                 are_authorized_ = true;
-                std::println("Authorization is completed, now recv control return back main loop");
+                LogFormat::LogFormatter<LogFormat::Info>("Authorization is completed, now recv control return back main loop");
             },
             [this](td::td_api::authorizationStateLoggingOut &) {
                 are_authorized_ = false;
-                std::println("Logging out");
+                LogFormat::LogFormatter<LogFormat::Info>("Logging out");
             },
-            [this](td::td_api::authorizationStateClosing &) { std::println("Closing"); },
+            [this](td::td_api::authorizationStateClosing &) { LogFormat::LogFormatter<LogFormat::Info>("Closing"); },
             [this](td::td_api::authorizationStateClosed &) {
                 are_authorized_ = false;
                 need_restart_   = true;
-                std::println("Terminated");
+                LogFormat::LogFormatter<LogFormat::Info>("Terminated");
             },
             [this](td::td_api::authorizationStateWaitPhoneNumber &) -> concurrencpp::result<void> {
-                std::println("Enter phone number: ");
+                LogFormat::LogFormatter<LogFormat::Info>("Enter phone number: ");
                 std::string phone_number;
                 std::cin >> phone_number;
 
                 create_authentication_query_handler()(co_await SendQuery(Utils::Make<td::td_api::setAuthenticationPhoneNumber>(phone_number, nullptr)));
             },
             [this](td::td_api::authorizationStateWaitEmailAddress &) -> concurrencpp::result<void> {
-                std::println("Enter email address: ");
+                LogFormat::LogFormatter<LogFormat::Info>("Enter email address: ");
                 std::string email_address;
                 std::cin >> email_address;
                 create_authentication_query_handler()(co_await SendQuery(Utils::Make<td::td_api::setAuthenticationEmailAddress>(email_address)));
             },
             [this](td::td_api::authorizationStateWaitEmailCode &)-> concurrencpp::result<void> {
-                std::println("Enter email authentication code: ");
+                LogFormat::LogFormatter<LogFormat::Info>("Enter email authentication code: ");
                 std::string code;
                 std::cin >> code;
                 create_authentication_query_handler()(
                     co_await SendQuery(Utils::Make<td::td_api::checkAuthenticationEmailCode>(Utils::Make<td::td_api::emailAddressAuthenticationCode>(code))));
             },
             [this](td::td_api::authorizationStateWaitCode &)-> concurrencpp::result<void> {
-                std::println("Enter authentication code: ");
+                LogFormat::LogFormatter<LogFormat::Info>("Enter authentication code: ");
                 std::string code;
                 std::cin >> code;
 
@@ -131,22 +127,22 @@ void TdClientCoreCo::on_authorization_state_update() {
             [this](td::td_api::authorizationStateWaitRegistration &) -> concurrencpp::result<void> {
                 std::string first_name;
                 std::string last_name;
-                std::println("Enter your first name: ");
+                LogFormat::LogFormatter<LogFormat::Info>("Enter your first name: ");
                 std::cin >> first_name;
-                std::println("Enter your last name: ");
+                LogFormat::LogFormatter<LogFormat::Info>("Enter your last name: ");
                 std::cin >> last_name;
 
                 create_authentication_query_handler()(co_await SendQuery(Utils::Make<td::td_api::registerUser>(first_name, last_name, false)));
             },
             [this](td::td_api::authorizationStateWaitPassword &) -> concurrencpp::result<void> {
-                std::println("Enter authentication password: ");
+                LogFormat::LogFormatter<LogFormat::Info>("Enter authentication password: ");
                 std::string password;
                 std::getline(std::cin, password);
 
                 create_authentication_query_handler()(co_await SendQuery(Utils::Make<td::td_api::checkAuthenticationPassword>(password)));
             },
             [this](td::td_api::authorizationStateWaitOtherDeviceConfirmation &state) {
-                std::println("Confirm this login link on another device: {}", state.link_);
+                LogFormat::LogFormatter<LogFormat::Info>("Confirm this login link on another device: {}", state.link_);
             },
             [this](td::td_api::authorizationStateWaitTdlibParameters &)-> concurrencpp::result<void> {
                 auto request                   = Utils::Make<td::td_api::setTdlibParameters>();
@@ -165,7 +161,7 @@ void TdClientCoreCo::on_authorization_state_update() {
 void TdClientCoreCo::check_authentication_error(Ptr_Object object) {
     if (object->get_id() == td::td_api::error::ID) {
         const auto error = Utils::MoveAs<td::td_api::error>(object);
-        std::println("Error: {}", td::td_api::to_string(error));
+        LogFormat::LogFormatter<LogFormat::Debug>("Error: {}", td::td_api::to_string(error));
         on_authorization_state_update();
     }
 }

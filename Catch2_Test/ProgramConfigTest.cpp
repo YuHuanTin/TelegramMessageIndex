@@ -3,7 +3,7 @@
 //
 
 #include "../Core/Register/StringRegister.h"
-#include "../Core/Config/ProgramConfig.h"
+#include "../Core/Config/ProgramConfig.h_"
 #include <catch.hpp>
 #include <filesystem>
 #include <print>

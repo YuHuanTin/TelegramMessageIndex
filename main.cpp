@@ -6,7 +6,7 @@
 concurrencpp::result<void> DoLoop(TdClientCoreCo &TdClient) {
     ObjectManager object_manager { TdClient };
     while (true) {
-        auto v = co_await TdClient.LoopIt(20);
+        auto v = co_await TdClient.LoopIt(1);
         if (!v) {
             continue;
         }

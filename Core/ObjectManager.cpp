@@ -40,14 +40,17 @@ void ObjectManager::ProcessObject(Ptr_Object Message) {
                 });
             },
             [this](td::td_api::updateNewMessage &Update_new_message) -> concurrencpp::null_result {
-                auto setSenderName = [this, &Update_new_message] {
-                    switch (Update_new_message.message_->sender_id_->get_id()) {
+                // move to ptr to avoid destroy early
+                auto newObj = Utils::Make<td::td_api::updateNewMessage>(std::move(Update_new_message));
+
+                auto setSenderName = [this, &newObj] {
+                    switch (newObj->message_->sender_id_->get_id()) {
                         case td::td_api::messageSenderChat::ID: {
-                            auto chat = Utils::MoveAs<td::td_api::messageSenderChat>(Update_new_message.message_->sender_id_);
+                            auto chat = Utils::MoveAs<td::td_api::messageSenderChat>(newObj->message_->sender_id_);
                             return this->chat_titles_.contains(chat->chat_id_) ? this->chat_titles_.at(chat->chat_id_) : "unknow_chat_title";
                         }
                         case td::td_api::messageSenderUser::ID: {
-                            auto user = Utils::MoveAs<td::td_api::messageSenderUser>(Update_new_message.message_->sender_id_);
+                            auto user = Utils::MoveAs<td::td_api::messageSenderUser>(newObj->message_->sender_id_);
                             return this->users_.contains(user->user_id_)
                                        ? this->users_.at(user->user_id_)->first_name_ + " " + this->users_.at(user->user_id_)->last_name_
                                        : "unknow_user";
@@ -56,37 +59,36 @@ void ObjectManager::ProcessObject(Ptr_Object Message) {
                     }
                     return std::string { "unknow_user_chat" };
                 };
-                auto downloadFileInner = [this](FileId File_id) -> concurrencpp::result<Ptr_File> {
+                auto downloadFileInner = [this](FileId File_id) -> concurrencpp::lazy_result<Ptr_File> {
                     auto object = co_await this->td_client_.SendQuery(Utils::Make<td::td_api::downloadFile>(File_id, 32, 0, 0, true));
                     co_return Utils::MoveAs<td::td_api::file>(object);
                 };
-                auto backupFileInner = [senderName = setSenderName()](const std::string &FilePath) {
+                auto backupFileInner = [&setSenderName](const std::string &FilePath) {
                     try {
-                        std::filesystem::path file_path(FilePath);
-                        std::string           new_file_name = senderName + "_" + file_path.filename().string();
+                        const std::filesystem::path file_path(FilePath);
+                        const std::string           new_file_name = setSenderName() + "_" + file_path.filename().string();
                         std::filesystem::rename(file_path, file_path.parent_path() / new_file_name);
                     } catch (std::exception &Exception) {
                         std::println("error: {}", Exception.what());
                     }
                 };
-                auto normallyBackUp = [&downloadFileInner, &backupFileInner](const FileId File_id) -> concurrencpp::result<void> {
+                auto normallyBackUp = [&downloadFileInner, &backupFileInner](const FileId File_id) -> concurrencpp::lazy_result<void> {
                     auto file = co_await downloadFileInner(File_id);
                     backupFileInner(file->local_->path_);
-                    co_return;
                 };
 
 
-                std::println("{}", to_string(Update_new_message.message_));
-                switch (Update_new_message.message_->content_->get_id()) {
+                std::println("{}", to_string(newObj->message_));
+                switch (newObj->message_->content_->get_id()) {
                     case td::td_api::messageAnimation::ID: {
-                        co_await normallyBackUp(Utils::MoveAs<td::td_api::messageAnimation>(Update_new_message.message_->content_)->animation_->animation_->id_);
+                        co_await normallyBackUp(Utils::MoveAs<td::td_api::messageAnimation>(newObj->message_->content_)->animation_->animation_->id_);
                         break;
                     }
                     case td::td_api::messageAudio::ID: {}
                     case td::td_api::messagePaidMedia::ID: {}
                     case td::td_api::messagePhoto::ID: {}
                     case td::td_api::messageVideo::ID: {
-                        co_await normallyBackUp(Utils::MoveAs<td::td_api::messageVideo>(Update_new_message.message_->content_)->video_->video_->id_);
+                        co_await normallyBackUp(Utils::MoveAs<td::td_api::messageVideo>(newObj->message_->content_)->video_->video_->id_);
                         break;
                     }
                     case td::td_api::messageVideoNote::ID: {}

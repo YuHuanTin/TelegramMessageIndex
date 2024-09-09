@@ -1,6 +1,8 @@
 #ifndef TELEGRAMCORE_H
 #define TELEGRAMCORE_H
 
+#include <td/telegram/Client.h>
+#include <td/telegram/td_api.h>
 #include "Utils/TdUtils.hpp"
 
 class TdClientCoreCo {
@@ -22,7 +24,7 @@ public:
      */
     concurrencpp::result<Ptr_Object> SendQuery(Ptr_Function f);
 
-    concurrencpp::result<Ptr_Object> LoopIt(const double TimeOutSeconds);
+    concurrencpp::result<Ptr_Object> LoopIt(double TimeOutSeconds);
 
 private:
     std::unique_ptr<td::ClientManager> client_manager_;
