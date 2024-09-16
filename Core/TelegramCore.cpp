@@ -1,16 +1,8 @@
-#include <iostream>
-#include <print>
-
-#include <concurrencpp/concurrencpp.h>
-#include <td/telegram/Client.h>
-#include <td/telegram/td_api.h>
-#include <td/telegram/td_api.hpp>
 
 #include "TelegramCore.h"
-
 #include "Utils/Logger.hpp"
 
-TdClientCoreCo::TdClientCoreCo() {
+TdClientCore::TdClientCore() {
     td::ClientManager::execute(Utils::Make<td::td_api::setLogVerbosityLevel>(1));
     client_manager_ = std::make_unique<td::ClientManager>();
     client_id_      = client_manager_->create_client_id();
@@ -18,8 +10,7 @@ TdClientCoreCo::TdClientCoreCo() {
     SendQuery(Utils::Make<td::td_api::getOption>("version"));
 }
 
-// todo 改进它
-void TdClientCoreCo::Auth() {
+void TdClientCore::Auth() {
     while (need_restart_ || !are_authorized_) {
         if (need_restart_) {
             restart();
@@ -29,7 +20,7 @@ void TdClientCoreCo::Auth() {
     }
 }
 
-concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::SendQuery(Ptr_Function f) {
+concurrencpp::result<TdClientCore::Ptr_Object> TdClientCore::SendQuery(Ptr_Function f) {
     auto query_id = next_query_id();
     LogFormat::LogFormatter<LogFormat::Debug>("->{}, {}", query_id, td::td_api::to_string(f));
 
@@ -43,7 +34,7 @@ concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::SendQuery(Ptr_F
     return result;
 }
 
-concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::LoopIt(const double TimeOutSeconds) {
+concurrencpp::result<TdClientCore::Ptr_Object> TdClientCore::LoopIt(const double TimeOutSeconds) {
     auto &&[client_id, request_id, object] = this->client_manager_->receive(TimeOutSeconds);
     if (!object) {
         co_return nullptr; // maybe timeout
@@ -57,7 +48,6 @@ concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::LoopIt(const do
     }
 
     assert(request_id == 0 && "unexpected request_id");
-    // 特殊处理 todo 尝试消灭它！
     if (request_id == 0 && object->get_id() == td::td_api::updateAuthorizationState::ID) {
         authorization_state_ = std::move(Utils::MoveAs<td::td_api::updateAuthorizationState>(object)->authorization_state_);
         on_authorization_state_update();
@@ -66,12 +56,12 @@ concurrencpp::result<TdClientCoreCo::Ptr_Object> TdClientCoreCo::LoopIt(const do
     co_return std::move(object);
 }
 
-void TdClientCoreCo::restart() {
+void TdClientCore::restart() {
     client_manager_.reset();
-    *this = TdClientCoreCo();
+    *this = TdClientCore();
 }
 
-auto TdClientCoreCo::create_authentication_query_handler() {
+auto TdClientCore::create_authentication_query_handler() {
     return [this, id = authentication_query_id_](Ptr_Object object) {
         if (id == authentication_query_id_) {
             check_authentication_error(std::move(object));
@@ -79,7 +69,7 @@ auto TdClientCoreCo::create_authentication_query_handler() {
     };
 }
 
-void TdClientCoreCo::on_authorization_state_update() {
+void TdClientCore::on_authorization_state_update() {
     authentication_query_id_++;
     td::td_api::downcast_call(*authorization_state_,
         Utils::overloaded(
@@ -158,7 +148,7 @@ void TdClientCoreCo::on_authorization_state_update() {
             }));
 }
 
-void TdClientCoreCo::check_authentication_error(Ptr_Object object) {
+void TdClientCore::check_authentication_error(Ptr_Object object) {
     if (object->get_id() == td::td_api::error::ID) {
         const auto error = Utils::MoveAs<td::td_api::error>(object);
         LogFormat::LogFormatter<LogFormat::Debug>("Error: {}", td::td_api::to_string(error));
@@ -166,6 +156,6 @@ void TdClientCoreCo::check_authentication_error(Ptr_Object object) {
     }
 }
 
-std::uint64_t TdClientCoreCo::next_query_id() {
+std::uint64_t TdClientCore::next_query_id() {
     return ++current_query_id_;
 }

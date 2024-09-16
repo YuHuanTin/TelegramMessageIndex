@@ -2,12 +2,11 @@
 // Created by YuHuanTin on 2024/3/19.
 //
 
-#include "../Core/Register/StringRegister.h"
-#include "../Core/Config/ProgramConfig.h_"
-#include <catch.hpp>
-#include <filesystem>
-#include <print>
 
+#include <catch.hpp>
+
+#include "../Core/Register/StringRegister.h"
+#include "../Core/Config/StorageManager2.h"
 
 void DeleteConfigFile() {
     // delete config file
@@ -25,40 +24,14 @@ TEST_CASE("ProgramConfigTest", "[ProgramConfig R/W test]") {
     // setting global encoding utf-8
     std::locale::global(std::locale("zh_CN.UTF-8"));
 
-    DeleteConfigFile();
-    ProgramConfig programConfig;
+    StorageManager2 storage_manager;
+    storage_manager.Write("test", 1123);
+    storage_manager.Write("dasjoidsa", "dsadsa");
+    
+    storage_manager.SyncFile();
 
-    SECTION("read and write") {
-        // batch write
-        programConfig.Write(REGISTER::STRING_POOL::config_proxy_host, "127.0.0.1");
-        programConfig.Write(REGISTER::STRING_POOL::config_proxy_port, "8080");
-        programConfig.Write(REGISTER::STRING_POOL::config_last_login_phone_number, "12345678901");
-        programConfig.Refresh();
+    auto v = storage_manager.Read<int>("test");
+    auto v2 = storage_manager.Read<std::string>("dasjoidsa");
 
-        REQUIRE(programConfig.Read(REGISTER::STRING_POOL::config_proxy_host) == "127.0.0.1");
-        REQUIRE(programConfig.Read(REGISTER::STRING_POOL::config_proxy_port) == "8080");
-        REQUIRE(programConfig.Read(REGISTER::STRING_POOL::config_last_login_phone_number) == "12345678901");
-
-        // single write
-        programConfig.Write(REGISTER::STRING_POOL::config_proxy_host, "1.1.1.1");
-        programConfig.Refresh();
-
-        REQUIRE(programConfig.Read(REGISTER::STRING_POOL::config_proxy_host) == "1.1.1.1");
-
-        // write list
-        programConfig.Write_lists(REGISTER::STRING_POOL::config_spy_picture_by_id_list, { "111111111", "2222222222", "dsaniu321" });
-        programConfig.Refresh();
-
-        auto l = programConfig.Read_lists(REGISTER::STRING_POOL::config_spy_picture_by_id_list);
-        REQUIRE(l.size() == 3);
-        REQUIRE(l[0] == "111111111");
-        REQUIRE(l[1] == "2222222222");
-        REQUIRE(l[2] == "dsaniu321");
-    }
-
-    SECTION("read empty") {
-        REQUIRE(programConfig.Read(REGISTER::STRING_POOL::config_proxy_host).empty());
-        REQUIRE(programConfig.Read(REGISTER::STRING_POOL::config_proxy_port).empty());
-        REQUIRE(programConfig.Read(REGISTER::STRING_POOL::config_last_login_phone_number).empty());
-    }
+    std::println("{}, {}", v, v2);
 }

@@ -2,10 +2,8 @@
 // Created by AFETT on 2024/8/4.
 //
 
-#ifndef TDUTILS_H
-#define TDUTILS_H
+#pragma once
 
-#include <td/telegram/td_api.h>
 
 namespace Utils {
     template<typename TO, typename FROM>
@@ -27,15 +25,14 @@ namespace Utils {
         struct overload;
 
         template<class F>
-        struct overload<F> : public F {
+        struct overload<F> : F {
             explicit overload(F f) : F(f) {}
         };
 
         template<class F, class... Fs>
         struct overload<F, Fs...>
-                : public overload<F>
-                  , public overload<Fs...> {
-            overload(F f, Fs... fs) : overload<F>(f), overload<Fs...>(fs...) {}
+                : overload<F>, overload<Fs...> {
+            explicit overload(F f, Fs... fs) : overload<F>(f), overload<Fs...>(fs...) {}
             using overload<F>::operator();
             using overload<Fs...>::operator();
         };
@@ -48,5 +45,3 @@ namespace Utils {
 
     // overloaded
 }
-
-#endif //TDUTILS_H

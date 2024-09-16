@@ -1,18 +1,20 @@
-#include <print>
-
-#include <concurrencpp/concurrencpp.h>
 #include "Core/ObjectManager.h"
+#include "Core/Register/ConfigRegister.h"
+#include "Core/Utils/ConsoleCtrlCapturer.h"
+#include "Core/Utils/Logger.hpp"
 
-concurrencpp::result<void> DoLoop(TdClientCoreCo &TdClient) {
-    ObjectManager object_manager { TdClient };
-    while (true) {
+
+[[noreturn]] concurrencpp::result<void> DoLoop(TdClientCore &TdClient) {
+    ConsoleCtrlCapturer ctrl_c_capturer;
+    ObjectManager       object_manager { TdClient };
+
+    while (!ctrl_c_capturer.IsCaptureCtrlC()) {
         auto v = co_await TdClient.LoopIt(1);
         if (!v) {
             continue;
         }
         object_manager.ProcessObject(std::move(v));
     }
-    co_return;
 }
 
 int main() {
@@ -23,12 +25,20 @@ int main() {
     // setting global encoding utf-8
     std::locale::global(std::locale("zh_CN.UTF-8"));
 
-    auto           startTimePoint = std::chrono::system_clock::now();
-    TdClientCoreCo example;
+    LogFormat::MinOutputLevel = REGISTER::CONFIGERS::Config_Log_Level.Value<LogFormat::LogLevel>();
 
-    example.SendQuery(Utils::Make<td::td_api::addProxy>("127.0.0.1", 7890, true, Utils::Make<td::td_api::proxyTypeSocks5>()));
+    const auto   startTimePoint = std::chrono::system_clock::now();
+    TdClientCore example;
+
+    if (const auto &[enable, host, port] = REGISTER::CONFIGERS::Config_Proxy_Setting.Value<REGISTER::ProxySettings>();
+        enable) {
+        example.SendQuery(Utils::Make<td::td_api::addProxy>(host, port, true, Utils::Make<td::td_api::proxyTypeSocks5>()));
+    }
+
     example.Auth();
-    std::println("elapsed time: {} ms", std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTimePoint).count());
+    LogFormat::LogFormatter<LogFormat::Info>("elapsed time: {} ms",
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTimePoint).count());
 
     DoLoop(example).get();
+    LogFormat::LogFormatter<LogFormat::Info>("process end");
 }
