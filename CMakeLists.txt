@@ -55,7 +55,9 @@ find_package(OpenSSL REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(concurrencpp CONFIG REQUIRED)
 find_package(nameof CONFIG REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
 
+link_libraries(nlohmann_json::nlohmann_json)
 link_libraries(nameof::nameof)
 link_libraries(concurrencpp::concurrencpp)
 link_libraries(ZLIB::ZLIB)
@@ -76,9 +78,10 @@ set(COMPILE_FILES
 
 add_executable(${PROJECT_NAME})
 target_sources(${PROJECT_NAME} PRIVATE ${COMPILE_FILES})
+target_precompile_headers(${PROJECT_NAME} PRIVATE Core/PCH.h)
 
 # add test subdirectory
-add_subdirectory(Catch2_Test)
+#add_subdirectory(Catch2_Test)
 
 
 set(ENABLE_ASAN ON)

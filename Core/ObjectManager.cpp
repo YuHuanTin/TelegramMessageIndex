@@ -3,7 +3,7 @@
 //
 
 #include "ObjectManager.h"
-ObjectManager::ObjectManager(TdClientCoreCo &TdClient): td_client_(TdClient) {}
+ObjectManager::ObjectManager(TdClientCore &TdClient): td_client_(TdClient) {}
 
 std::string ObjectManager::GetUserName(const UserId User_id) {
     const auto it = users_.find(User_id);

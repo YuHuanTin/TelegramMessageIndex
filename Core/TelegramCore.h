@@ -1,11 +1,9 @@
-#ifndef TELEGRAMCORE_H
-#define TELEGRAMCORE_H
 
-#include <td/telegram/Client.h>
-#include <td/telegram/td_api.h>
+#pragma once
+
 #include "Utils/TdUtils.hpp"
 
-class TdClientCoreCo {
+class TdClientCore {
     using Ptr_Object             = Utils::TdPtr<td::td_api::Object>;
     using Ptr_Function           = Utils::TdPtr<td::td_api::Function>;
     using Ptr_AuthorizationState = Utils::TdPtr<td::td_api::AuthorizationState>;
@@ -13,7 +11,7 @@ class TdClientCoreCo {
     std::unordered_map<uint64_t, concurrencpp::result_promise<Ptr_Object> > co_handlers_;
 
 public:
-    explicit TdClientCoreCo();
+    explicit TdClientCore();
 
     void Auth();
 
@@ -46,5 +44,3 @@ private:
 
     std::uint64_t next_query_id();
 };
-
-#endif //TELEGRAMCORE_H

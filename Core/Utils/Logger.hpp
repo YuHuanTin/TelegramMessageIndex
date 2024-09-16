@@ -2,12 +2,8 @@
 // Created by AFETT on 2024/8/18.
 //
 
-#ifndef LOGGER_HPP
-#define LOGGER_HPP
+#pragma once
 
-#include <array>
-#include <chrono>
-#include <string_view>
 
 namespace LogFormat {
     enum LogLevel : uint8_t {
@@ -20,11 +16,11 @@ namespace LogFormat {
     inline LogLevel                           MinOutputLevel = Debug;
     constexpr std::array<std::string_view, 4> LogTypeString  = { "debug", "Info", "Warning", "Error" };
     constexpr std::array<std::string_view, 5> LogColor       = {
-        "\033[1;45m", // Debug: highlight purple
-        "\033[1;37m", // Info: highlight white
-        "\033[1;33m", // Warning: yellow
-        "\033[1;31m", // Error: red
-        "\033[0m"     // clean 
+        "\033[37m", // Debug    : white
+        "\033[97m", // Info     : highlight white
+        "\033[33m", // Warning  : yellow
+        "\033[31m", // Error    : red
+        "\033[0m"   // clean 
     };
 
     template<typename T>
@@ -50,5 +46,3 @@ namespace LogFormat {
     }
 }
 
-
-#endif //LOGGER_HPP

@@ -7,8 +7,7 @@ find_package(Catch2 CONFIG)
 #message(STATUS "CATCH2_TEST_FILES: ${CATCH2_TEST_FILES}")
 
 set(CATCH2_TEST_FILES
-        ../Core/Config/ProgramConfig.cpp_
-        ../Core/Config/ProgramConfig.h_
+
 )
 
 set(OPEN_ASAN OFF)
@@ -25,9 +24,9 @@ endif ()
 add_executable(Catch2_Test ProgramConfigTest.cpp ${CATCH2_TEST_FILES})
 target_link_libraries(Catch2_Test PRIVATE Catch2::Catch2 Catch2::Catch2WithMain)
 
+target_precompile_headers(Catch2_Test PRIVATE ../Core/PCH.h)
+
 set(CONFIGREGISTER_TEST_FILES
-        ../Core/Config/ProgramConfig.h_
-        ../Core/Config/ProgramConfig.cpp_
         ../Core/Register/ConfigRegister.h
 )
 add_executable(ConfigRegisterTest ConfigTest.cpp ${CONFIGREGISTER_TEST_FILES})

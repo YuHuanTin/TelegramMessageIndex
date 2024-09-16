@@ -4,12 +4,13 @@
 
 #include "ConsoleCtrlCapturer.h"
 
-#include <print>
+#include "Logger.hpp"
 
-BOOL ConsoleCtrlCapturer::ControlHandler(const DWORD ctrl_type) {
-    switch (ctrl_type) {
+BOOL WINAPI ConsoleCtrlCapturer::ControlHandler(const DWORD CtrlType) {
+    switch (CtrlType) {
         case CTRL_C_EVENT:
-            ConsoleCtrlCapturer::is_capture_ctrl_c_ = true;
+            is_capture_ctrl_c_ = true;
+            return TRUE;
         case CTRL_BREAK_EVENT:
         case CTRL_CLOSE_EVENT:
         case CTRL_LOGOFF_EVENT:
@@ -18,20 +19,21 @@ BOOL ConsoleCtrlCapturer::ControlHandler(const DWORD ctrl_type) {
         default:
             return FALSE;
     }
+    return FALSE;
 }
 
 ConsoleCtrlCapturer::ConsoleCtrlCapturer() {
-    if (!SetConsoleCtrlHandler(ConsoleCtrlCapturer::ControlHandler, TRUE)) {
-        std::println("SetConsoleCtrlHandler failed: {}", GetLastError());
+    if (!SetConsoleCtrlHandler(ControlHandler, TRUE)) {
+        LogFormat::LogFormatter<LogFormat::Error>("SetConsoleCtrlHandler failed: {}", GetLastError());
     }
 }
 
-bool ConsoleCtrlCapturer::IsCaptureCtrlC() { return is_capture_ctrl_c_; }
+bool ConsoleCtrlCapturer::IsCaptureCtrlC() {
+    return is_capture_ctrl_c_;
+}
 
 ConsoleCtrlCapturer::~ConsoleCtrlCapturer() {
-    if (!SetConsoleCtrlHandler(ConsoleCtrlCapturer::ControlHandler, FALSE)) {
-        std::println("SetConsoleCtrlHandler failed: {}", GetLastError());
+    if (!SetConsoleCtrlHandler(ControlHandler, FALSE)) {
+        LogFormat::LogFormatter<LogFormat::Error>("SetConsoleCtrlHandler failed: {}", GetLastError());
     }
-
-    ConsoleCtrlCapturer::is_capture_ctrl_c_ = false;
 }

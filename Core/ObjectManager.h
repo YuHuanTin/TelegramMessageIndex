@@ -2,17 +2,8 @@
 // Created by AFETT on 2024/8/18.
 //
 
-#ifndef OBJECTMANAGER_H
-#define OBJECTMANAGER_H
+#pragma once
 
-#include <print>
-#include <algorithm>
-#include <filesystem>
-#include <unordered_map>
-
-#include <nameof.hpp>
-#include <concurrencpp/concurrencpp.h>
-#include <td/telegram/td_api.hpp>
 
 #include "TelegramCore.h"
 #include "Utils/TdUtils.hpp"
@@ -32,17 +23,15 @@ class ObjectManager {
     std::unordered_map<UserId, Ptr_User>      users_;
     std::unordered_map<FolderId, FolderTitle> folder_titles_;
 
-    TdClientCoreCo &td_client_;
+    TdClientCore &td_client_;
 
 public:
-    explicit ObjectManager(TdClientCoreCo &TdClient);;
+    explicit ObjectManager(TdClientCore &TdClient);;
 
-    std::string GetUserName(const UserId User_id);
+    std::string GetUserName(UserId User_id);
 
-    std::string GetChatTitle(const ChatId Chat_id);
+    std::string GetChatTitle(ChatId Chat_id);
 
     void ProcessObject(Ptr_Object Message);
 };
 
-
-#endif //OBJECTMANAGER_H
