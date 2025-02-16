@@ -4,7 +4,7 @@
 #include "Core/Utils/Logger.hpp"
 
 
-[[noreturn]] concurrencpp::result<void> DoLoop(TdClientCore &TdClient) {
+concurrencpp::result<void> DoLoop(TdClientCore &TdClient) {
     ConsoleCtrlCapturer ctrl_c_capturer;
     ObjectManager       object_manager { TdClient };
 
@@ -15,6 +15,7 @@
         }
         object_manager.ProcessObject(std::move(v));
     }
+    co_return;
 }
 
 int main() {

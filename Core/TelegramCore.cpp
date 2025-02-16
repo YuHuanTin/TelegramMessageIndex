@@ -90,7 +90,7 @@ void TdClientCore::on_authorization_state_update() {
             [this](td::td_api::authorizationStateWaitPhoneNumber &) -> concurrencpp::result<void> {
                 LogFormat::LogFormatter<LogFormat::Info>("Enter phone number: ");
                 std::string phone_number;
-                std::cin >> phone_number;
+                std::getline(std::cin, phone_number);
 
                 create_authentication_query_handler()(co_await SendQuery(Utils::Make<td::td_api::setAuthenticationPhoneNumber>(phone_number, nullptr)));
             },

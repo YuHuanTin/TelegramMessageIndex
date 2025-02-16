@@ -5,7 +5,10 @@
 #pragma once
 
 template<typename ReturnType>
-std::string ReadFile(const std::string &FilePath, const bool CreateIfNotExist = true) {
+    requires requires {
+        sizeof(typename ReturnType::value_type) == 1;
+    }
+ReturnType ReadFile(const std::string &FilePath, const bool CreateIfNotExist = true) {
     std::fstream fs(FilePath, std::ios_base::in | std::ios_base::binary);
     //不存在则创建
     if (!fs.is_open() && CreateIfNotExist)
@@ -14,25 +17,27 @@ std::string ReadFile(const std::string &FilePath, const bool CreateIfNotExist = 
     if (!fs.is_open())
         throw std::runtime_error("can't open file, maybe not exist or permission denied");
     //获取文件大小
+    const auto begin = fs.tellg();
     fs.seekg(0, std::ios_base::end);
-    const auto fileSize = fs.tellg();
+    const auto end = fs.tellg();
     fs.seekg(0, std::ios_base::beg);
-    //初始化返回容器
+
+    // 读取
     ReturnType content;
-    content.resize(fileSize);
-    //读取内容
-    fs.read(std::bit_cast<char *>(content.data()), fileSize);
-    fs.close();
+    content.resize(static_cast<size_t>(end - begin));
+    fs.read(reinterpret_cast<char *>(content.data()), static_cast<std::streamsize>(content.size()));
     return content;
 }
 
 template<typename InputType>
+    requires std::is_same_v<InputType, std::string> ||
+             std::is_same_v<InputType, std::vector<uint8_t> >
 bool WriteFile(const std::string &FilePath, InputType &&content) {
     std::fstream fs(FilePath, std::ios_base::out | std::ios_base::binary);
     if (!fs.is_open())
         return false;
 
-    fs.write(std::bit_cast<const char *>(content.data()), content.size());
+    fs.write(std::bit_cast<const char *>(content.data()), static_cast<std::streamsize>(content.size()));
     fs.close();
     return true;
 }

@@ -1,7 +1,11 @@
 cmake_minimum_required(VERSION ${CMAKE_VERSION})
 project(TelegramMessageIndex CXX)
 
-set(CMAKE_CXX_STANDARD 23)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+    set(IS_CLANG_CL TRUE)
+endif ()
+
+set(CMAKE_CXX_STANDARD 26)
 set(CMAKE_VERBOSE_MAKEFILE ON CACHE BOOL "Detail output" FORCE)
 
 # scan all TDLib types directories 
@@ -65,8 +69,12 @@ link_libraries(OpenSSL::Crypto OpenSSL::SSL)
 link_libraries(ws2_32 CRYPT32 Normaliz Psapi)
 
 
-# set utf-8
-add_compile_options(/utf-8)
+if (IS_CLANG_CL)
+    add_compile_options(/clang:-Wall -Wextra -Wpedantic -Wconversion)
+elseif (MSVC)
+    add_compile_options(/utf-8)
+endif ()
+
 set(COMPILE_FILES
         main.cpp
         Core/TelegramCore.cpp
@@ -84,19 +92,28 @@ target_precompile_headers(${PROJECT_NAME} PRIVATE Core/PCH.h)
 #add_subdirectory(Catch2_Test)
 
 
-set(ENABLE_ASAN ON)
-if (ENABLE_ASAN AND MSVC)
-    # https://learn.microsoft.com/en-us/cpp/sanitizers/error-container-overflow?view=msvc-170
-    # 如果出现以下错误则启用以下定义
-    # my_static.lib(my_code.obj) : error LNK2038: mismatch detected for 'annotate_vector': value '0' doesn't match value '1' in main.obj
-    target_compile_definitions(${PROJECT_NAME} PRIVATE _DISABLE_VECTOR_ANNOTATION _DISABLE_STRING_ANNOTATION)
+set(ENABLE_ASAN OFF)
+if (IS_CLANG_CL)
+    if (ENABLE_ASAN)
+        message("CLANG-CL ASAN ENABLED")
+        link_directories(D:/LLVM/lib/clang/19/lib/windows)
+        link_libraries(clang_rt.asan-x86_64.lib)
+        add_compile_options(-fsanitize=address -MT)
+    endif ()
+else ()
+    if (ENABLE_ASAN AND MSVC)
+        # https://learn.microsoft.com/en-us/cpp/sanitizers/error-container-overflow?view=msvc-170
+        # 如果出现以下错误则启用以下定义
+        # my_static.lib(my_code.obj) : error LNK2038: mismatch detected for 'annotate_vector': value '0' doesn't match value '1' in main.obj
+        target_compile_definitions(${PROJECT_NAME} PRIVATE _DISABLE_VECTOR_ANNOTATION _DISABLE_STRING_ANNOTATION)
 
-    target_compile_options(${PROJECT_NAME} PRIVATE /fsanitize=address /Zi)
-    target_link_options(${PROJECT_NAME} PRIVATE /INCREMENTAL:NO)
+        target_compile_options(${PROJECT_NAME} PRIVATE /fsanitize=address /Zi)
+        target_link_options(${PROJECT_NAME} PRIVATE /INCREMENTAL:NO)
 
-    cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CMAKE_CXX_COMPILER_DIR)
-    message(AUTHOR_WARNING "ASAN PATH >>> PATH=${CMAKE_CXX_COMPILER_DIR} <<<, Please add this directory to RuntimeEnv to use ASAN.")
+        cmake_path(GET CMAKE_CXX_COMPILER PARENT_PATH CMAKE_CXX_COMPILER_DIR)
+        message(AUTHOR_WARNING "ASAN PATH >>> PATH=${CMAKE_CXX_COMPILER_DIR} <<<, Please add this directory to RuntimeEnv to use ASAN.")
 
-    file(COPY ${CMAKE_CXX_COMPILER_DIR}/clang_rt.asan_dynamic-x86_64.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-    message(AUTHOR_WARNING "Auto Copy x64-windows.dll to ${CMAKE_CURRENT_BINARY_DIR}...")
+        file(COPY ${CMAKE_CXX_COMPILER_DIR}/clang_rt.asan_dynamic-x86_64.dll DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
+        message(AUTHOR_WARNING "Auto Copy x64-windows.dll to ${CMAKE_CURRENT_BINARY_DIR}...")
+    endif ()
 endif ()

@@ -26,7 +26,7 @@ class ObjectManager {
     TdClientCore &td_client_;
 
 public:
-    explicit ObjectManager(TdClientCore &TdClient);;
+    explicit ObjectManager(TdClientCore &TdClient);
 
     std::string GetUserName(UserId User_id);
 
