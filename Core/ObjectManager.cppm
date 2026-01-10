@@ -29,12 +29,23 @@ export class ObjectManager {
 
     TdClientCore &td_client_;
 
+
+    std::string GetSenderName(Utils::TdPtr<td::td_api::MessageSender> &&senderId);
+
+    concurrencpp::result<Ptr_File> _DownloadFile(const FileId File_id);
+    
+    void _MoveLocalFile(std::string &localPath, const std::string &senderName);
+
 public:
     explicit ObjectManager(TdClientCore &TdClient);
 
     std::string GetUserName(UserId User_id);
 
     std::string GetChatTitle(ChatId Chat_id);
+
+    concurrencpp::result<void> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> &&sender, Utils::TdPtr<td::td_api::messageAnimation> &&animation);
+    concurrencpp::result<void> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> &&sender, Utils::TdPtr<td::td_api::messagePhoto> &&photo);
+    concurrencpp::result<void> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> &&sender, Utils::TdPtr<td::td_api::messageVideo> &&video);
 
     void ProcessObject(Ptr_Object Message);
 };
