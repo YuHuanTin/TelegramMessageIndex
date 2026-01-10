@@ -27,7 +27,7 @@ target_link_libraries(Catch2_Test PRIVATE Catch2::Catch2 Catch2::Catch2WithMain)
 target_precompile_headers(Catch2_Test PRIVATE ../Core/PCH.h)
 
 set(CONFIGREGISTER_TEST_FILES
-        ../Core/Register/ConfigRegister.h
+        ../Core/Register/ConfigRegister.cppm
 )
 add_executable(ConfigRegisterTest ConfigTest.cpp ${CONFIGREGISTER_TEST_FILES})
 target_link_libraries(ConfigRegisterTest PRIVATE Catch2::Catch2 Catch2::Catch2WithMain)

@@ -1,7 +1,13 @@
-#include "Core/ObjectManager.h"
-#include "Core/Register/ConfigRegister.h"
-#include "Core/Utils/ConsoleCtrlCapturer.h"
-#include "Core/Utils/Logger.hpp"
+#include <concurrencpp/concurrencpp.h>
+#include <td/telegram/td_api.h>
+
+import Logger;
+import ConsoleCtrlCapturer;
+import TdUtils;
+import ObjectManager;
+import TelegramCore;
+import StringRegister;
+import ConfigRegister;
 
 
 concurrencpp::result<void> DoLoop(TdClientCore &TdClient) {

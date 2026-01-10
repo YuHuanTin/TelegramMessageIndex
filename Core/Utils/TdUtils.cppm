@@ -1,18 +1,19 @@
-//
-// Created by AFETT on 2024/8/4.
-//
 
-#pragma once
+module;
 
+#include <td/telegram/td_api.h>
 
-namespace Utils {
+export module TdUtils;
+
+export namespace Utils
+{
     template<typename TO, typename FROM>
     td::td_api::object_ptr<TO> MoveAs(FROM &&Obj) {
         return td::td_api::move_object_as<TO>(Obj);
     }
 
     template<typename TYPE, typename... ARGS>
-    td::td_api::object_ptr<TYPE> Make(ARGS &&... args) {
+    td::td_api::object_ptr<TYPE> Make(ARGS &&...args) {
         return td::td_api::make_object<TYPE>(std::forward<ARGS>(args)...);
     }
 
@@ -20,7 +21,8 @@ namespace Utils {
     using TdPtr = td::td_api::object_ptr<TYPE>;
 
     // overloaded
-    namespace detail {
+    namespace detail
+    {
         template<class... Fs>
         struct overload;
 
@@ -31,7 +33,7 @@ namespace Utils {
 
         template<class F, class... Fs>
         struct overload<F, Fs...>
-                : overload<F>, overload<Fs...> {
+            : overload<F>, overload<Fs...> {
             explicit overload(F f, Fs... fs) : overload<F>(f), overload<Fs...>(fs...) {}
             using overload<F>::operator();
             using overload<Fs...>::operator();

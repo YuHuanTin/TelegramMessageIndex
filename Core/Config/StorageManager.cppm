@@ -1,8 +1,11 @@
-//
-// Created by AFETT on 2024/9/16.
-//
 
-#pragma once
+module;
+
+#include <nlohmann/json.hpp>
+
+export module StorageManager;
+
+import StringRegister;
 
 template<typename ReturnType>
     requires requires {
@@ -10,13 +13,13 @@ template<typename ReturnType>
     }
 ReturnType ReadFile(const std::string &FilePath, const bool CreateIfNotExist = true) {
     std::fstream fs(FilePath, std::ios_base::in | std::ios_base::binary);
-    //不存在则创建
+    // 不存在则创建
     if (!fs.is_open() && CreateIfNotExist)
         fs.open(FilePath, std::ios_base::out | std::ios_base::binary);
-    //还读取不了则返回空
+    // 还读取不了则返回空
     if (!fs.is_open())
         throw std::runtime_error("can't open file, maybe not exist or permission denied");
-    //获取文件大小
+    // 获取文件大小
     const auto begin = fs.tellg();
     fs.seekg(0, std::ios_base::end);
     const auto end = fs.tellg();
@@ -30,8 +33,7 @@ ReturnType ReadFile(const std::string &FilePath, const bool CreateIfNotExist = t
 }
 
 template<typename InputType>
-    requires std::is_same_v<InputType, std::string> ||
-             std::is_same_v<InputType, std::vector<uint8_t> >
+    requires std::is_same_v<InputType, std::string> || std::is_same_v<InputType, std::vector<uint8_t>>
 bool WriteFile(const std::string &FilePath, InputType &&content) {
     std::fstream fs(FilePath, std::ios_base::out | std::ios_base::binary);
     if (!fs.is_open())
@@ -42,7 +44,7 @@ bool WriteFile(const std::string &FilePath, InputType &&content) {
     return true;
 }
 
-class StorageManager {
+export class StorageManager {
     std::string    file_name_ { REGISTER::STRING_POOL::normal_config_file_name };
     nlohmann::json configJson_ = {};
 

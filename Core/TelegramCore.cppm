@@ -1,14 +1,23 @@
 
-#pragma once
+module;
 
-#include "Utils/TdUtils.hpp"
+#include <concurrencpp/concurrencpp.h>
 
-class TdClientCore {
+#include <td/telegram/Client.h>
+#include <td/telegram/td_api.h>
+
+export module TelegramCore;
+
+import TdUtils;
+import Logger;
+
+
+export class TdClientCore {
     using Ptr_Object             = Utils::TdPtr<td::td_api::Object>;
     using Ptr_Function           = Utils::TdPtr<td::td_api::Function>;
     using Ptr_AuthorizationState = Utils::TdPtr<td::td_api::AuthorizationState>;
 
-    std::unordered_map<uint64_t, concurrencpp::result_promise<Ptr_Object> > co_handlers_;
+    std::unordered_map<uint64_t, concurrencpp::result_promise<Ptr_Object>> co_handlers_;
 
 public:
     explicit TdClientCore();
@@ -30,11 +39,8 @@ private:
 
     Ptr_AuthorizationState authorization_state_;
     bool                   are_authorized_ { false };
-    bool                   need_restart_ { false };
-    std::uint64_t          current_query_id_ { 0 };
+    std::atomic<uint64_t>  current_query_id_ { 0 };
     std::uint64_t          authentication_query_id_ { 0 };
-
-    void restart();
 
     auto create_authentication_query_handler();
 

@@ -1,6 +1,15 @@
 
-#include "TelegramCore.h"
-#include "Utils/Logger.hpp"
+module;
+
+#include <cassert>
+#include <concurrencpp/concurrencpp.h>
+
+#include <td/telegram/Client.h>
+#include <td/telegram/td_api.h>
+
+module TelegramCore;
+
+import std;
 
 TdClientCore::TdClientCore() {
     td::ClientManager::execute(Utils::Make<td::td_api::setLogVerbosityLevel>(1));
@@ -11,12 +20,8 @@ TdClientCore::TdClientCore() {
 }
 
 void TdClientCore::Auth() {
-    while (need_restart_ || !are_authorized_) {
-        if (need_restart_) {
-            restart();
-        } else if (!are_authorized_) {
-            LoopIt(10);
-        }
+    while (!are_authorized_) {
+        LoopIt(10);
     }
 }
 
@@ -26,7 +31,7 @@ concurrencpp::result<TdClientCore::Ptr_Object> TdClientCore::SendQuery(Ptr_Funct
 
     client_manager_->send(client_id_, query_id, std::move(f));
 
-    // submit promise 
+    // submit promise
     concurrencpp::result_promise<Ptr_Object> promise;
 
     auto result            = promise.get_result();
@@ -56,11 +61,6 @@ concurrencpp::result<TdClientCore::Ptr_Object> TdClientCore::LoopIt(const double
     co_return std::move(object);
 }
 
-void TdClientCore::restart() {
-    client_manager_.reset();
-    *this = TdClientCore();
-}
-
 auto TdClientCore::create_authentication_query_handler() {
     return [this, id = authentication_query_id_](Ptr_Object object) {
         if (id == authentication_query_id_) {
@@ -73,6 +73,8 @@ void TdClientCore::on_authorization_state_update() {
     authentication_query_id_++;
     td::td_api::downcast_call(*authorization_state_,
         Utils::overloaded(
+            [this](td::td_api::authorizationStateWaitPremiumPurchase &wait_premium_purchase) {
+            },
             [this](td::td_api::authorizationStateReady &) {
                 are_authorized_ = true;
                 LogFormat::LogFormatter<LogFormat::Info>("Authorization is completed, now recv control return back main loop");
@@ -84,8 +86,9 @@ void TdClientCore::on_authorization_state_update() {
             [this](td::td_api::authorizationStateClosing &) { LogFormat::LogFormatter<LogFormat::Info>("Closing"); },
             [this](td::td_api::authorizationStateClosed &) {
                 are_authorized_ = false;
-                need_restart_   = true;
-                LogFormat::LogFormatter<LogFormat::Info>("Terminated");
+                // need_restart_   = true;
+                LogFormat::LogFormatter<LogFormat::Info>("Terminated!!!");
+                exit(-1);
             },
             [this](td::td_api::authorizationStateWaitPhoneNumber &) -> concurrencpp::result<void> {
                 LogFormat::LogFormatter<LogFormat::Info>("Enter phone number: ");
@@ -100,14 +103,14 @@ void TdClientCore::on_authorization_state_update() {
                 std::cin >> email_address;
                 create_authentication_query_handler()(co_await SendQuery(Utils::Make<td::td_api::setAuthenticationEmailAddress>(email_address)));
             },
-            [this](td::td_api::authorizationStateWaitEmailCode &)-> concurrencpp::result<void> {
+            [this](td::td_api::authorizationStateWaitEmailCode &) -> concurrencpp::result<void> {
                 LogFormat::LogFormatter<LogFormat::Info>("Enter email authentication code: ");
                 std::string code;
                 std::cin >> code;
                 create_authentication_query_handler()(
                     co_await SendQuery(Utils::Make<td::td_api::checkAuthenticationEmailCode>(Utils::Make<td::td_api::emailAddressAuthenticationCode>(code))));
             },
-            [this](td::td_api::authorizationStateWaitCode &)-> concurrencpp::result<void> {
+            [this](td::td_api::authorizationStateWaitCode &) -> concurrencpp::result<void> {
                 LogFormat::LogFormatter<LogFormat::Info>("Enter authentication code: ");
                 std::string code;
                 std::cin >> code;
@@ -134,7 +137,7 @@ void TdClientCore::on_authorization_state_update() {
             [this](td::td_api::authorizationStateWaitOtherDeviceConfirmation &state) {
                 LogFormat::LogFormatter<LogFormat::Info>("Confirm this login link on another device: {}", state.link_);
             },
-            [this](td::td_api::authorizationStateWaitTdlibParameters &)-> concurrencpp::result<void> {
+            [this](td::td_api::authorizationStateWaitTdlibParameters &) -> concurrencpp::result<void> {
                 auto request                   = Utils::Make<td::td_api::setTdlibParameters>();
                 request->database_directory_   = "tdlib";
                 request->use_message_database_ = true;

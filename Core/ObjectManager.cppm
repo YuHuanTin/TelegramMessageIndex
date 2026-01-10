@@ -1,14 +1,18 @@
-//
-// Created by AFETT on 2024/8/18.
-//
 
-#pragma once
+module;
+
+#include <concurrencpp/concurrencpp.h>
+#include "td/telegram/td_api.h"
 
 
-#include "TelegramCore.h"
-#include "Utils/TdUtils.hpp"
+export module ObjectManager;
 
-class ObjectManager {
+import std;
+import TelegramCore;
+import TdUtils;
+
+
+export class ObjectManager {
     using Ptr_Object  = Utils::TdPtr<td::td_api::Object>;
     using Ptr_User    = Utils::TdPtr<td::td_api::user>;
     using Ptr_File    = Utils::TdPtr<td::td_api::file>;
@@ -34,4 +38,3 @@ public:
 
     void ProcessObject(Ptr_Object Message);
 };
-

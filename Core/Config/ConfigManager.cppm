@@ -1,17 +1,17 @@
-//
-// Created by AFETT on 2024/9/16.
-//
 
-#pragma once
+module;
 
-#include "StorageManager.h"
+export module ConfigManager;
+
+import std;
+import StorageManager;
 
 inline static StorageManager StorageManager;
 
-template<typename DEFAULT_VALUE_TYPE = std::string>
+export template<typename DEFAULT_VALUE_TYPE = std::string>
 class ConfigManager {
-    std::string_view                  key_{};
-    std::optional<DEFAULT_VALUE_TYPE> default_value_{};
+    std::string_view                  key_ {};
+    std::optional<DEFAULT_VALUE_TYPE> default_value_ {};
 
 public:
     ConfigManager() = delete;

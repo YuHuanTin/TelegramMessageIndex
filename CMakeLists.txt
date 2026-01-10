@@ -1,8 +1,16 @@
 cmake_minimum_required(VERSION ${CMAKE_VERSION})
+
+set(CMAKE_EXPERIMENTAL_CXX_IMPORT_STD "d0edc3af-4c50-42ea-a356-e2862fe7a444")
+set(CMAKE_CXX_MODULE_STD ON)
+set(VCPKG_TARGET_TRIPLET "x64-mingw-dynamic")
+
 project(TelegramMessageIndex CXX)
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang" AND CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
-    set(IS_CLANG_CL TRUE)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    set(IS_CLANG TRUE)
+    if (CMAKE_CXX_COMPILER_FRONTEND_VARIANT STREQUAL "MSVC")
+        set(IS_CLANG_CL TRUE)
+    endif ()
 endif ()
 
 set(CMAKE_CXX_STANDARD 26)
@@ -71,37 +79,54 @@ link_libraries(ws2_32 CRYPT32 Normaliz Psapi)
 
 if (IS_CLANG_CL)
     add_compile_options(/clang:-Wall -Wextra -Wpedantic -Wconversion)
+elseif (IS_CLANG)
+    add_compile_options(-Wall -Wextra -Wpedantic -Wconversion)
 elseif (MSVC)
     add_compile_options(/utf-8)
 endif ()
 
-set(COMPILE_FILES
-        main.cpp
-        Core/TelegramCore.cpp
-        Core/ObjectManager.cpp
-        Core/Utils/TdUtils.hpp
-        Core/Utils/Logger.hpp
-        Core/Utils/ConsoleCtrlCapturer.cpp
+set(COMPILE_CXX_MODULES
+        Core/TelegramCore.cppm
+        Core/ObjectManager.cppm
+        Core/Config/ConfigManager.cppm
+        Core/Config/StorageManager.cppm
+        Core/Register/ConfigRegister.cppm
+        Core/Register/StringRegister.cppm
+        Core/Utils/TdUtils.cppm
+        Core/Utils/Logger.cppm
+        Core/Utils/ConsoleCtrlCapturer.cppm
 )
 
-add_executable(${PROJECT_NAME})
-target_sources(${PROJECT_NAME} PRIVATE ${COMPILE_FILES})
-target_precompile_headers(${PROJECT_NAME} PRIVATE Core/PCH.h)
+set(COMPILE_CXX_MODULES_IMPLS
+        Core/TelegramCore.cpp
+        Core/ObjectManager.cpp
+)
+
+
+add_executable(${PROJECT_NAME} main.cpp)
+target_sources(${PROJECT_NAME}
+        PUBLIC
+        FILE_SET CXX_MODULES
+        FILES ${COMPILE_CXX_MODULES}
+
+        PRIVATE
+        ${COMPILE_CXX_MODULES_IMPLS}
+)
 
 # add test subdirectory
 #add_subdirectory(Catch2_Test)
 
 
 set(ENABLE_ASAN OFF)
-if (IS_CLANG_CL)
-    if (ENABLE_ASAN)
+if (ENABLE_ASAN)
+    if (IS_CLANG_CL)
         message("CLANG-CL ASAN ENABLED")
         link_directories(D:/LLVM/lib/clang/19/lib/windows)
         link_libraries(clang_rt.asan-x86_64.lib)
         add_compile_options(-fsanitize=address -MT)
-    endif ()
-else ()
-    if (ENABLE_ASAN AND MSVC)
+    elseif (IS_CLANG)
+        message(WARNING "NO IMPLMENTATION FOR CLANG NOW")
+    elseif (MSVC)
         # https://learn.microsoft.com/en-us/cpp/sanitizers/error-container-overflow?view=msvc-170
         # 如果出现以下错误则启用以下定义
         # my_static.lib(my_code.obj) : error LNK2038: mismatch detected for 'annotate_vector': value '0' doesn't match value '1' in main.obj
