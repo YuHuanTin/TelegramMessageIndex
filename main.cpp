@@ -1,3 +1,4 @@
+
 #include <concurrencpp/concurrencpp.h>
 #include <td/telegram/td_api.h>
 
@@ -10,7 +11,7 @@ import StringRegister;
 import ConfigRegister;
 
 
-concurrencpp::result<void> DoLoop(TdClientCore &TdClient) {
+EagerRetType<> DoLoop(TdClientCore &TdClient) {
     ConsoleCtrlCapturer ctrl_c_capturer;
     ObjectManager       object_manager { TdClient };
 

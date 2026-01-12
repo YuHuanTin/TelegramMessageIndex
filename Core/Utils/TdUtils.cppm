@@ -1,9 +1,20 @@
 
 module;
 
+#include <concurrencpp/concurrencpp.h>
 #include <td/telegram/td_api.h>
 
 export module TdUtils;
+
+export {
+    using EagerNullRetType = concurrencpp::null_result;
+
+    template<typename T = void>
+    using EagerRetType = concurrencpp::result<T>;
+
+    template<typename T>
+    using EagerPromiseType = concurrencpp::result_promise<T>;
+}
 
 export namespace Utils
 {
@@ -44,6 +55,5 @@ export namespace Utils
     auto overloaded(F... f) {
         return detail::overload<F...>(f...);
     }
-
     // overloaded
 }

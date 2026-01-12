@@ -2,7 +2,6 @@
 module;
 
 #include <concurrencpp/concurrencpp.h>
-
 #include <td/telegram/Client.h>
 #include <td/telegram/td_api.h>
 
@@ -17,7 +16,7 @@ export class TdClientCore {
     using Ptr_Function           = Utils::TdPtr<td::td_api::Function>;
     using Ptr_AuthorizationState = Utils::TdPtr<td::td_api::AuthorizationState>;
 
-    std::unordered_map<uint64_t, concurrencpp::result_promise<Ptr_Object>> co_handlers_;
+    std::unordered_map<uint64_t, EagerPromiseType<Ptr_Object>> co_handlers_;
 
 public:
     explicit TdClientCore();
@@ -27,11 +26,11 @@ public:
     /**
      * 发送请求并且返回 result 对象
      * @param f 发送的请求函数
-     * @return concurrencpp::result 对象
+     * @return EagerRetType 对象
      */
-    concurrencpp::result<Ptr_Object> SendQuery(Ptr_Function f);
+    EagerRetType<Ptr_Object> SendQuery(Ptr_Function f);
 
-    concurrencpp::result<Ptr_Object> LoopIt(double TimeOutSeconds);
+    EagerRetType<Ptr_Object> LoopIt(double TimeOutSeconds);
 
 private:
     std::unique_ptr<td::ClientManager> client_manager_;
@@ -42,7 +41,7 @@ private:
     std::atomic<uint64_t>  current_query_id_ { 0 };
     std::uint64_t          authentication_query_id_ { 0 };
 
-    auto create_authentication_query_handler();
+    EagerNullRetType authentication_query_handler(uint64_t nowId, EagerRetType<Ptr_Object> &&future);
 
     void on_authorization_state_update();
 

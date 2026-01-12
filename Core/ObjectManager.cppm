@@ -1,7 +1,6 @@
 
 module;
 
-#include <concurrencpp/concurrencpp.h>
 #include "td/telegram/td_api.h"
 
 
@@ -10,7 +9,6 @@ export module ObjectManager;
 import std;
 import TelegramCore;
 import TdUtils;
-
 
 export class ObjectManager {
     using Ptr_Object  = Utils::TdPtr<td::td_api::Object>;
@@ -30,22 +28,22 @@ export class ObjectManager {
     TdClientCore &td_client_;
 
 
-    std::string GetSenderName(Utils::TdPtr<td::td_api::MessageSender> &&senderId);
+    std::string _GetUserName(UserId User_id);
 
-    concurrencpp::result<Ptr_File> _DownloadFile(const FileId File_id);
-    
+    std::string _GetChatTitle(ChatId Chat_id);
+
+    EagerRetType<Ptr_File> _DownloadFile(const FileId File_id);
+
     void _MoveLocalFile(std::string &localPath, const std::string &senderName);
 
 public:
     explicit ObjectManager(TdClientCore &TdClient);
 
-    std::string GetUserName(UserId User_id);
+    std::string GetSenderName(Utils::TdPtr<td::td_api::MessageSender> senderId);
 
-    std::string GetChatTitle(ChatId Chat_id);
-
-    concurrencpp::result<void> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> &&sender, Utils::TdPtr<td::td_api::messageAnimation> &&animation);
-    concurrencpp::result<void> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> &&sender, Utils::TdPtr<td::td_api::messagePhoto> &&photo);
-    concurrencpp::result<void> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> &&sender, Utils::TdPtr<td::td_api::messageVideo> &&video);
+    EagerRetType<> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> sender, Utils::TdPtr<td::td_api::messageAnimation> animation);
+    EagerRetType<> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> sender, Utils::TdPtr<td::td_api::messagePhoto> photo);
+    EagerRetType<> DownloadResource(Utils::TdPtr<td::td_api::MessageSender> sender, Utils::TdPtr<td::td_api::messageVideo> video);
 
     void ProcessObject(Ptr_Object Message);
 };
