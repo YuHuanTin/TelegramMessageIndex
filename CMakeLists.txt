@@ -88,13 +88,10 @@ endif ()
 set(COMPILE_CXX_MODULES
         Core/TelegramCore.cppm
         Core/ObjectManager.cppm
-        Core/Config/ConfigManager.cppm
-        Core/Config/StorageManager.cppm
-        Core/Register/ConfigRegister.cppm
-        Core/Register/StringRegister.cppm
         Core/Utils/TdUtils.cppm
         Core/Utils/Logger.cppm
         Core/Utils/ConsoleCtrlCapturer.cppm
+        Core/Utils/Configs.cppm
 )
 
 set(COMPILE_CXX_MODULES_IMPLS

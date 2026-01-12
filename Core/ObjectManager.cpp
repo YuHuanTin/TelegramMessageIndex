@@ -49,7 +49,7 @@ void ObjectManager::_MoveLocalFile(std::string &localPath, const std::string &se
         const std::string           new_file_name = senderName + "_" + file_path.filename().string();
         std::filesystem::rename(file_path, file_path.parent_path() / new_file_name);
     } catch (std::exception &Exception) {
-        std::println("error: {}", Exception.what());
+        LogFormat::LogFormatter<LogFormat::Error>("error: {}", Exception.what());
     }
 }
 
@@ -101,7 +101,7 @@ void ObjectManager::ProcessObject(Ptr_Object Message) {
             [this](td::td_api::updateNewMessage &Update_new_message) -> EagerNullRetType {
                 // move to ptr to avoid destroy early
                 auto newObj = Utils::Make<td::td_api::updateNewMessage>(std::move(Update_new_message));
-                std::println("{}", to_string(newObj->message_));
+                LogFormat::LogFormatter<LogFormat::Info>("recv UpdateNewMessage: {}", to_string(newObj->message_));
 
                 switch (newObj->message_->content_->get_id()) {
                     case td::td_api::messageAnimation::ID: {

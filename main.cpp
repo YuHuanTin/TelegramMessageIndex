@@ -7,8 +7,7 @@ import ConsoleCtrlCapturer;
 import TdUtils;
 import ObjectManager;
 import TelegramCore;
-import StringRegister;
-import ConfigRegister;
+import Configs;
 
 
 EagerRetType<> DoLoop(TdClientCore &TdClient) {
@@ -33,20 +32,26 @@ int main() {
     // setting global encoding utf-8
     std::locale::global(std::locale("zh_CN.UTF-8"));
 
-    LogFormat::MinOutputLevel = REGISTER::CONFIGERS::Config_Log_Level.Value<LogFormat::LogLevel>();
+    // init configs
+    CONFIGS::LoadConfig();
+
+    // init log formatter
+    LogFormat::Init(CONFIGS::global_logs_settings.log_level, CONFIGS::global_logs_settings.redirect_file);
+
 
     const auto   startTimePoint = std::chrono::system_clock::now();
-    TdClientCore example;
+    TdClientCore core;
 
-    if (const auto &[enable, host, port] = REGISTER::CONFIGERS::Config_Proxy_Setting.Value<REGISTER::ProxySettings>();
-        enable) {
-        example.SendQuery(Utils::Make<td::td_api::addProxy>(host, port, true, Utils::Make<td::td_api::proxyTypeSocks5>()));
+    if (CONFIGS::global_proxy_settings.enable) {
+        auto s5       = Utils::Make<td::td_api::proxyTypeSocks5>(CONFIGS::global_proxy_settings.username, CONFIGS::global_proxy_settings.password);
+        auto addProxy = Utils::Make<td::td_api::addProxy>(CONFIGS::global_proxy_settings.host, CONFIGS::global_proxy_settings.port, true, std::move(s5));
+        core.SendQuery(std::move(addProxy));
     }
 
-    example.Auth();
+    core.Auth();
     LogFormat::LogFormatter<LogFormat::Info>("elapsed time: {} ms",
         std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - startTimePoint).count());
 
-    DoLoop(example).get();
+    DoLoop(core).get();
     LogFormat::LogFormatter<LogFormat::Info>("process end");
 }

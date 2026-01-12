@@ -9,6 +9,7 @@ export module ObjectManager;
 import std;
 import TelegramCore;
 import TdUtils;
+import Logger;
 
 export class ObjectManager {
     using Ptr_Object  = Utils::TdPtr<td::td_api::Object>;
